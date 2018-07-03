@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title><%- sitetitle %></title>
+<% stylesheets.forEach((css) => { -%>
+<link rel="stylesheet" href="<%- css %>" />
+<% }) -%>
+</head>
+<body>
+  <% if((mainmenu = block('mainmenu')).length) { -%>
+<div class="ui fixed inverted menu">
+<%- mainmenu %>
+  </div>
+  <% } -%>
+  <div class="ui container">
+  <% if(title.length) { %><h1 class="ui dividing header"><%= title %></h1><% } %>
+  <%- content %>
+  </div>
+  <% javascripts.forEach((js) => { -%>
+<script type="text/javascript" src="<%- js %>"></script>
+  <% }) -%>
+  <% if(scripts.length) { -%>
+<script type="text/javascript">
+    //<![CDATA[
+    <%- scripts %>
+    //]]>
+  </script>
+  <% } -%>
+</body>
+</html>

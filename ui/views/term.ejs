@@ -1,0 +1,72 @@
+<% if(gsm = term.Pool.get(port)) { %>
+<div class="ui form">
+  <div class="ui two column stackable grid">
+    <div class="column">
+      <div class="two fields">
+        <div class="field">Manufacturer:</div>
+        <div class="ui field label"><%= gsm.info.manufacturer %></div>
+      </div>
+      <div class="two fields">
+        <div class="field">Model:</div>
+        <div class="ui field label"><%= gsm.info.model %></div>
+      </div>
+      <div class="two fields">
+        <div class="field">Version:</div>
+        <div class="ui field label"><%= gsm.info.version %></div>
+      </div>
+      <div class="two fields">
+        <div class="field">Serial:</div>
+        <div class="ui field label"><%= gsm.info.serial %></div>
+      </div>
+      <div class="two fields">
+        <div class="field">IMSI:</div>
+        <div class="ui field label"><%= gsm.info.imsi %></div>
+      </div>
+    </div>
+    <div class="column">
+      <div class="two fields">
+        <div class="field">Call monitor:</div>
+        <div class="ui field label"><%= gsm.info.hasCall ? 'yes' : 'no' %></div>
+      </div>
+      <div class="two fields">
+        <div class="field">SMS monitor:</div>
+        <div class="ui field label"><%= gsm.info.hasSms ? 'yes' : 'no' %></div>
+      </div>
+      <div class="two fields">
+        <div class="field">USSD monitor:</div>
+        <div class="ui field label"><%= gsm.info.hasUssd ? 'yes' : 'no' %></div>
+      </div>
+      <div class="two fields">
+        <div class="field">SMSC:</div>
+        <div class="ui field label"><%= gsm.props.smsc %></div>
+      </div>
+      <div class="two fields">
+        <div class="field">Network:</div>
+        <div class="ui field label"><%= gsm.props.network.operator ? gsm.props.network.operator : gsm.props.network.code %></div>
+      </div>
+    </div>
+  </div>
+  <div class="field">
+    <label>Logs:</label>
+    <textarea class="log <%= gsm.name %>" rows=20 readonly></textarea>
+  </div>
+</div>
+<% } else { %>
+<div class="ui icon yellow message">
+  <i class="exclamation triangle icon"></i>
+  <div class="content">
+    <div class="header">
+      This terminal is not active
+    </div>
+    <p>Once this terminal is active, you can view the communication logs for this terminal.</p>
+  </div>
+</div>
+<% } %>
+<% if(gsm) { %>
+<% script.create('jQuery').add(`
+$.term.addTerm('${gsm.name}', {
+    log: $('.log.${gsm.name}')
+});
+$.term.getLog('${gsm.name}');
+`); %>
+<% } %>

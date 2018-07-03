@@ -1,0 +1,30 @@
+<% script.create('jQuery').add(`
+$.term = {
+    terms: {},
+    getLog: function(name) {
+        var self = this;
+        $.get('/log/' + name).then(function(json) {
+            if (json.logs) {
+                var log = $(self.terms[name].log);
+                log.text(json.logs);
+                self.terms[name].time = json.time;
+            }
+        });
+    },
+    addLog: function(name, data) {
+        var self = this;
+        if (data.time > self.terms[name].time) {
+            var log = $(self.terms[name].log);
+            log.append(data.message + '\\r\\n');
+            log.scrollTop(log[0].scrollHeight - log.height());
+            self.terms[name].time = data.time;
+        }
+    },
+    addTerm: function(name, options) {
+        var self = this;
+        self.terms[name] = {
+            log: options.log
+        }
+    }
+}
+`); %>

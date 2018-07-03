@@ -1,0 +1,6 @@
+[submodule "ui/lib/script"]
+	path = ui/lib/script
+	url = https://github.com/tohenk/node-ntjs.git
+[submodule "ui/public/js"]
+	path = ui/public/js
+	url = https://github.com/tohenk/node-ntjs-assets.git
