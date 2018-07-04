@@ -145,7 +145,10 @@ ntAtModem.factory.prototype.tx = function(data, options) {
             options = options || {};
             this.setState({busy: true});
             var timeout = null;
-            const txd = new ntAtModem.txdata(this, data, options.expect);
+            const params = {};
+            if (options.expect) params.expect = options.expect;
+            if (options.ignore) params.ignore = options.ignore;
+            const txd = new ntAtModem.txdata(this, data, params);
             const t = () => {
                 this.setState({busy: false});
                 this.timedout++;
@@ -274,10 +277,12 @@ util.inherits(ntAtModem.factory, EventEmitter);
 
 // txdata
 
-ntAtModem.txdata = function(parent, data, expect) {
+ntAtModem.txdata = function(parent, data, options) {
+    options = options || {};
     this.parent = parent;
     this.data = data;
-    this.expect = expect || null;
+    this.expect = options.expect || null;
+    this.ignore = options.ignore || null;
     this.okay = false;
     this.error = false;
     this.timeout = false;
@@ -292,23 +297,10 @@ ntAtModem.txdata.prototype.check = function(response) {
             if (this.isExpected(s) || this.isOkay(s) || this.isError(s)) {
                 return true;
             }
-            this.responses.push(s);
+            if (!this.isIgnored(s)) this.responses.push(s);
         }
     }
     return false;
-}
-
-ntAtModem.txdata.prototype.isExpected = function(response) {
-    if (this.expect) {
-        var expects = Array.isArray(this.expect) ? this.expect : [this.expect];
-        for (var i = 0; i < expects.length; i++) {
-            if (this.matchRaw(expects[i], response)) {
-                this.okay = true;
-                break;
-            }
-        }
-    }
-    return this.okay;
 }
 
 ntAtModem.txdata.prototype.isOkay = function(response) {
@@ -335,6 +327,28 @@ ntAtModem.txdata.prototype.isError = function(response) {
         }
     }
     return this.error;
+}
+
+ntAtModem.txdata.prototype.isExpected = function(response) {
+    if (this.isMatch(this.expect, response)) {
+        this.okay = true;
+    }
+    return this.okay;
+}
+
+ntAtModem.txdata.prototype.isIgnored = function(response) {
+    return this.isMatch(this.ignore, response);
+}
+
+ntAtModem.txdata.prototype.isMatch = function(value, response) {
+    if (value) {
+        var values = Array.isArray(value) ? value : [value];
+        for (var i = 0; i < values.length; i++) {
+            if (this.matchRaw(values[i], response)) {
+                return true;
+            }
+        }
+    }
 }
 
 ntAtModem.txdata.prototype.match = function(cmd, response) {

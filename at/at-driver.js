@@ -43,6 +43,7 @@ ntAtDriver.AT_PARAM_SMS_MODE                   = 'PARAM_SMS_MODE';
 ntAtDriver.AT_PARAM_SMS_COMMIT                 = 'PARAM_SMS_COMMIT';
 ntAtDriver.AT_PARAM_SMS_CANCEL                 = 'PARAM_SMS_CANCEL';
 ntAtDriver.AT_PARAM_SMS_STORAGE                = 'PARAM_SMS_STORAGE';
+ntAtDriver.AT_PARAM_SMS_WAIT_PROMPT            = 'PARAM_SMS_WAIT_PROMPT';
 ntAtDriver.AT_PARAM_USSD_ENCODED               = 'PARAM_USSD_ENCODED';
 ntAtDriver.AT_PARAM_USSD_ENCODING              = 'PARAM_USSD_ENCODING';
 ntAtDriver.AT_PARAM_USSD_RESPONSE_ENCODED      = 'PARAM_USSD_RESPONSE_ENCODED';
@@ -196,6 +197,7 @@ ntAtDriver.factory.prototype.init = function() {
     this.add(ntAtDriver.AT_PARAM_SMS_COMMIT,                 String.fromCharCode(0x1a));
     this.add(ntAtDriver.AT_PARAM_SMS_CANCEL,                 String.fromCharCode(0x1b));
     this.add(ntAtDriver.AT_PARAM_SMS_STORAGE,                '%NONE%');
+    this.add(ntAtDriver.AT_PARAM_SMS_WAIT_PROMPT,            '1');
     this.add(ntAtDriver.AT_PARAM_USSD_ENCODED,               '0');
     this.add(ntAtDriver.AT_PARAM_USSD_ENCODING,              ntAtConst.USSD_ENC_7BIT.toString());
     this.add(ntAtDriver.AT_PARAM_USSD_RESPONSE_ENCODED,      '0');

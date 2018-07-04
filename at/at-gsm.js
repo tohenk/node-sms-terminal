@@ -608,15 +608,16 @@ ntAtGsm.factory.prototype.sendPDU = function(phoneNumber, message, hash) {
         this.setState({sending: true});
         this.query(this.getCmd(ntAtDrv.AT_CMD_SMS_MODE_SET, {SMS_MODE: ntAtConst.SMS_MODE_PDU}))
             .then(() => {
-                var prompt = this.getCmd(ntAtDrv.AT_RESPONSE_SMS_PROMPT);
-                var works = [];
+                const works = [];
+                const prompt = this.getCmd(ntAtDrv.AT_RESPONSE_SMS_PROMPT);
+                const waitPrompt = 1 == parseInt(this.getCmd(ntAtDrv.AT_PARAM_SMS_WAIT_PROMPT)) ? true : false;
                 queues.forEach((msg) => {
-                    var params = {
+                    const params = {
                         SMS_LEN: msg.tplen,
                         MESSAGE: msg.pdu,
                         COMMIT: this.getCmd(ntAtDrv.AT_PARAM_SMS_COMMIT)
                     }
-                    if (prompt.length) {
+                    if (waitPrompt) {
                         works.push(() => {
                             return this.query(this.getCmd(ntAtDrv.AT_CMD_SMS_SEND_PDU, params), {
                                 expect: prompt
@@ -631,6 +632,7 @@ ntAtGsm.factory.prototype.sendPDU = function(phoneNumber, message, hash) {
                     } else {
                         works.push(() => {
                             return this.query(this.getCmd(ntAtDrv.AT_CMD_SMS_SEND_PDU, params), {
+                                ignore: prompt,
                                 timeout: this.sendTimeout,
                                 context: msg
                             });
