@@ -10,24 +10,24 @@
 <% }) -%>
 </head>
 <body>
-  <% if((mainmenu = block('mainmenu')).length) { -%>
-<div class="ui fixed inverted menu">
-<%- mainmenu %>
+  <%_ if((mainmenu = block('mainmenu')).length) { -%>
+  <div class="ui fixed inverted menu">
+    <%- mainmenu %>
   </div>
-  <% } -%>
+  <%_ } -%>
   <div class="ui container">
   <% if(title.length) { %><h1 class="ui dividing header"><%= title %></h1><% } %>
   <%- content %>
   </div>
-  <% javascripts.forEach((js) => { -%>
-<script type="text/javascript" src="<%- js %>"></script>
-  <% }) -%>
-  <% if(scripts.length) { -%>
-<script type="text/javascript">
+  <%_ javascripts.forEach((js) => { -%>
+  <script type="text/javascript" src="<%- js %>"></script>
+  <%_ }) -%>
+  <%_ if(scripts.length) { -%>
+  <script type="text/javascript">
     //<![CDATA[
     <%- scripts %>
     //]]>
   </script>
-  <% } -%>
+  <%_ } -%>
 </body>
 </html>
