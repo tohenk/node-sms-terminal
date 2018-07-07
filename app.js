@@ -107,7 +107,11 @@ config.readNewMessage = Cmd.get('read-new-message') ? true : false;
 AppTerm.init(config).then(() => {
     run();
 }).catch((err) => {
-    console.log(err);
+    if (err instanceof Error) {
+        console.log('%s: %s', err.name, err.message);
+    } else {
+        console.log(err);
+    }
 });
 
 function run() {
