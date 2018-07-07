@@ -3,8 +3,8 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
-
-const indexRouter = require('./routes/index');
+const session = require('express-session');
+const FileStore = require('session-file-store')(session);
 
 const app = express();
 
@@ -18,12 +18,26 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// session
+app.use(session({
+    store: new FileStore,
+    secret: 'nt-sms-terminal',
+    resave: true,
+    saveUninitialized: true
+  })
+);
+
+// security
+app.use(require('./lib/security/security')());
+
 // app helpers
 app.use(require('./lib/helper/core')());
 app.use(require('./lib/helper/menu')());
 app.use(require('./lib/helper/pager')());
 
-app.use('/', indexRouter);
+// routes
+app.use('/', require('./routes/index'));
+app.use('/', require('./routes/security'));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

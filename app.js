@@ -86,10 +86,17 @@ if (!config.logdir)
 if (!config.msgRefFilename)
     config.msgRefFilename = path.join(__dirname, 'msgref.json');
 if (!config.secret) {
-    const shasum = crypto.createHash('sha1');
-    shasum.update(ntUtil.formatDate(new Date(), 'yyyyMMddHHmmsszzz') + (Math.random() * 1000000).toString());
-    config.secret = shasum.digest('hex').substr(0, 8);
+    config.secret = hashgen();
     console.log('Using secret: %s', config.secret);
+}
+if (!config.security) config.security = {};
+if (!config.security.username) {
+    config.security.username = 'admin';
+    console.log('Web interface username using default: %s', config.security.username);
+}
+if (!config.security.password) {
+    config.security.password = hashgen();
+    console.log('Web interface password generated: %s', config.security.password);
 }
 if (!config.database.logging) {
     const dblogger = new console.Console(fs.createWriteStream(path.join(config.logdir, 'db.log')));
@@ -130,6 +137,10 @@ function run() {
         AppTerm.setSocketIo(io);
         app.title = 'SMS Terminal';
         app.term = app.locals.term = AppTerm;
+        app.authenticate = (username, password) => {
+            return username == config.security.username && password == config.security.password ?
+                true : false;
+        }
         http.listen(port, () => {
             console.log('Application ready on port %s...', port);
         });
@@ -139,6 +150,12 @@ function run() {
             });
         }
     }
+}
+
+function hashgen() {
+    const shasum = crypto.createHash('sha1');
+    shasum.update(ntUtil.formatDate(new Date(), 'yyyyMMddHHmmsszzz') + (Math.random() * 1000000).toString());
+    return shasum.digest('hex').substr(0, 8);
 }
 
 function usage() {

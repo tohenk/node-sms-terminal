@@ -1,4 +1,4 @@
-<% block('mainmenu', menu({
+<% menus = {
     branding: {
         type: 'brand',
         title: apptitle,
@@ -14,7 +14,14 @@
             }
         }
     }
-}, {mainmenu: true, indentation: 2})); %>
+} %>
+<% if(user.authenticated) {
+    menus.tasks.items.logout = {
+        title: 'Logout',
+        url: '/logout'
+    }
+} %>
+<% block('mainmenu', menu(menus, {mainmenu: true, indentation: 2})); %>
 <% script.create('jQuery')
   .useDependencies(['jQuery/Util', 'SemanticUI/Dialog/Message'])
   .add(`

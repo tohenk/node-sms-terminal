@@ -1,3 +1,7 @@
 {
-    "secret":"CHANGEME"
+    "secret": "CHANGEME",
+    "security": {
+        "username": "admin",
+        "password": "admin"
+    }
 }
