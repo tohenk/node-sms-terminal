@@ -16,6 +16,9 @@
     }
 } %>
 <% if(user.authenticated) {
+    menus.tasks.items.divider1 = {
+        type: 'divider'
+    }
     menus.tasks.items.logout = {
         title: 'Logout',
         url: '/logout'
