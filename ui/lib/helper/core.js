@@ -47,8 +47,8 @@ function attachHelper(res) {
     }
     if (!res._render) {
         res._render = res.render;
-        res.render = function(view, options) {
-            var options = options || {};
+        res.render = (view, options) => {
+            options = options || {};
             startRender();
             res._render(view, options, (err, str) => {
                 if (err) return res.req.next(err);
