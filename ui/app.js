@@ -23,7 +23,10 @@ app.use(session({
     store: new FileStore({path: path.join(__dirname, '..', 'sessions')}),
     secret: 'nt-sms-terminal',
     resave: true,
-    saveUninitialized: true
+    saveUninitialized: true,
+    cookie: {
+      maxAge: 3600000
+    }
   })
 );
 
