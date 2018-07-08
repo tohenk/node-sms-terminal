@@ -35,12 +35,10 @@ function Security(options) {
         const path = req.originalUrl;
         // skip security on login or logout route
         if (path.indexOf(loginroute) == 0 || path.indexOf(logoutroute) == 0) {
-            console.log('Security: skipping to login or logout route');
             return next();
         }
         // skip if user already uthenticated
         if (req.session.user.authenticated) {
-            console.log('Security: user already authenticated');
             return next();
         }
         res.redirect(loginroute + '?r=' + path);
