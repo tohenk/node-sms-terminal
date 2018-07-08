@@ -1,12 +1,12 @@
-<div class="ui middle aligned center aligned grid">
+<div class="ui middle aligned center aligned stackable grid">
   <div class="six wide column">
     <h2 class="ui image header">
       <img src="/images/logo.png" class="image">
-      <div class="content">Log-in to your account</div>
+      <div class="content">Log-in to <%= apptitle %></div>
     </h2>
     <form class="ui large form login" action="/login">
       <input type="hidden" name="continue" value="<%= redirect %>">
-      <div class="ui left aligned stacked segment">
+      <div class="ui left aligned segment">
         <div class="ui red message hidden">
           <i class="red exclamation triangle icon"></i><span class="errmsg"></span>
         </div>
@@ -54,6 +54,7 @@ $.login = function(form) {
             }
         })
     ;
+    form.find('input[name=username]').focus();
 }
 $.login($('form.login'));
 `); %>
