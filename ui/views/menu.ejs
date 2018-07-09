@@ -19,6 +19,12 @@
     menus.tasks.items.divider1 = {
         type: 'divider'
     }
+    menus.tasks.items.sendat = {
+        title: 'Send AT command'
+    }
+    menus.tasks.items.divider2 = {
+        type: 'divider'
+    }
     menus.tasks.items.logout = {
         title: 'Logout',
         url: '/logout'
@@ -26,9 +32,16 @@
 } %>
 <% block('mainmenu', menu(menus, {mainmenu: true, indentation: 2})); %>
 <% script.create('jQuery')
-  .useDependencies(['jQuery/Util', 'SemanticUI/Dialog/Message'])
+  .useDependencies(['jQuery/Util', 'jQuery/Notification', 'SemanticUI/Dialog/Message'])
   .add(`
 $.tasks = {
+    notifyResult: function(result) {
+        if (result.success) {
+            $.ntfy.notify(result.notice ? result.notice : 'Operation successfully submitted!', 'success');
+        } else {
+            $.ntfy.notify(result.error ? result.error : 'Operation failed!', 'error');
+        }
+    },
     about: function() {
         var self = this;
         var f = function() {
@@ -51,11 +64,69 @@ $.tasks = {
             f();
         }
     },
+    sendAt: function() {
+        var self = this;
+        if ($.term) {
+            var termlist = function() {
+                var result = [];
+                for (var term in $.term.terms) {
+                    result.push($.util.template('<option value="%VALUE%">%LABEL%</option>',
+                        {VALUE: term, LABEL: term}));
+                }
+                return result.join('');
+            }
+            var message =
+                '<form class="ui container form">' +
+                    '<div class="field">' +
+                        '<label>Select terminal:</label>' +
+                        '<select name="terminal" class="ui dropdown">' +
+                            termlist() +
+                        '</select>' +
+                    '</div>' +
+                    '<div class="field">' +
+                        '<label>Command:</label>' +
+                        '<input type="text" name="command" value="">' +
+                    '</div>' +
+                '</form>';
+            var dlg = $.ntdlg.dialog('sendatdlg', 'Send AT command', message, 'desktop icon', {
+                'okay': {
+                    type: 'green approve',
+                    caption: '<i class="check icon"></i>Ok',
+                    handler: function() {
+                        var term = dlg.find('select[name="terminal"]');
+                        var cmd = dlg.find('input[name="command"]');
+                        if (term.val() == null) {
+                            term.focus();
+                            return false;
+                        }
+                        if (cmd.val() == '') {
+                            cmd.focus();
+                            return false;
+                        }
+                        $.post('/TERM/at'.replace(/TERM/, term.val()), {command: cmd.val()}).then(function(json) {
+                            self.notifyResult(json);
+                        });
+                        return false;
+                    }
+                },
+                'cancel': {
+                    type: 'red deny',
+                    caption: '<i class="times icon"></i>Cancel'
+                }
+            });
+            dlg.find('select.dropdown').dropdown();
+            $.ntdlg.show(dlg);
+        }
+    },
     init: function() {
         var self = this;
         $('.menu-about').on('click', function(e) {
             e.preventDefault();
             self.about();
+        });
+        $('.menu-sendat').on('click', function(e) {
+            e.preventDefault();
+            self.sendAt();
         });
     }
 }

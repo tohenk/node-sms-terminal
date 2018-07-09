@@ -173,6 +173,10 @@ AppTerm.splitNumber = function(phoneNumber) {
     return result;
 }
 
+AppTerm.get = function(portName) {
+    return this.Pool.get(portName);
+}
+
 AppTerm.open = function(portName) {
     return new Promise((resolve, reject) => {
         AtPool.open(portName).then((gsm) => {

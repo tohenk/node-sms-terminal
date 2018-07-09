@@ -3,6 +3,7 @@ const router  = express.Router();
 const fs      = require('fs');
 const path    = require('path');
 const moment  = require('moment');
+const util    = require('util');
 
 function getActivity(req, res, next) {
   const result = {};
@@ -94,6 +95,44 @@ router.get('/log/:term', function(req, res, next) {
 
 router.get('/activity-log', function(req, res, next) {
   getActivityLog(req, res, next);
+});
+
+router.post('/:term/at', function(req, res, next) {
+  const result = {success: false};
+  if (req.params.term && req.body.command) {
+    const term = req.app.term;
+    const terminal = term.get(req.params.term);
+    if (terminal) {
+      terminal.tx(req.body.command)
+        .then((data) => {
+          result.success = true;
+          if (data.hasResponse()) {
+            result.notice = util.format('Command return OK [%s]', data.res());
+          } else {
+            result.notice = 'Command return OK';
+          }
+          res.json(result);
+        })
+        .catch((data) => {
+          if (data.error) {
+            if (data.hasResponse()) {
+              result.error = util.format('Command return ERROR [%s]', data.res());
+            } else {
+              result.error = 'Command return ERROR';
+            }
+          }
+          if (data.timeout) {
+            result.error = 'Command return TIMEOUT';
+          }
+          res.json(result);
+        })
+      ;
+    } else {
+      res.json(result);
+    }
+  } else {
+    next();
+  }
 });
 
 module.exports = router;
