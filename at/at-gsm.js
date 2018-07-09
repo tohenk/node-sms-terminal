@@ -164,7 +164,7 @@ ntAtGsm.factory.prototype.doProcess = function(response) {
             if (this.props.ussd && this.props.ussd.wait) {
                 this.props.ussd.data = data.code + data.value;
                 this.debug('!! %s: Waiting USSD response to complete', this.name);
-            } else if (data.unprocessed) {
+            } else if (data.unprocessed && data.unprocessed.length) {
                 // in some case, on WAVECOM modem, sometime response is not properly
                 // returned in one line
                 const nextdata = this.resolveUnprocessed(data);
@@ -197,24 +197,26 @@ ntAtGsm.factory.prototype.resolveUnprocessed = function(data) {
                     var handler = this.processor.handler(nextdata);
                     if (handler.length) {
                         resolved = i;
-                        len = j - 1;
+                        len = j - i;
                         break;
                     }
                 }
             }
         }
-        if (resolved) break;
+        if (resolved != undefined) break;
     }
     if (resolved != undefined) {
         unprocessed[resolved] = response;
-        unprocessed.splice(resolved + 1, len);
+        if (len > 0) {
+            unprocessed.splice(resolved + 1, len);
+        }
         var nextdata = new ntAtProcessor.rxdata(this, unprocessed);
         this.processor.process(nextdata);
         if (nextdata.result) {
-            this.debug('%s: Unprocessed result %s', this.name, JSON.stringify(nextdata));
             result = nextdata;
+            this.debug('%s: Unprocessed resolved %s', this.name, JSON.stringify(nextdata.result));
         }
-        if (nextdata.unprocessed && nextdata.index > 0) {
+        if (nextdata.unprocessed && nextdata.unprocessed.length && nextdata.index > 0) {
             nextdata.unprocessed.splice(0, nextdata.index + 1);
         }
         this.saveUnprocessed(nextdata.unprocessed);

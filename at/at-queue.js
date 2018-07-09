@@ -31,7 +31,7 @@ const ntAtQueue     = module.exports = exports;
 const EventEmitter  = require('events');
 const util          = require('util');
 
-// tx
+// queue
 
 ntAtQueue.queue = function(queues, handler, check) {
     EventEmitter.call(this);

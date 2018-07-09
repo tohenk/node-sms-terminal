@@ -489,13 +489,16 @@ ntAtProcessor.rxdata.prototype.match = function(cmd) {
 ntAtProcessor.rxdata.prototype.matchAt = function(cmd, index) {
     const result = {};
     if (index < this.responses.length) {
-        var command = this.parent.getCmd(cmd);
-        var response = this.responses[index];
+        const command = this.parent.getCmd(cmd);
+        const response = this.responses[index];
         if (this.isMatch(command, response)) {
-            result.index = index;
-            result.matched = cmd;
-            result.code = command;
-            result.value = response.substring(command.length).trim();
+            const value = response.substring(command.length).trim();
+            if (value.length) {
+                result.index = index;
+                result.matched = cmd;
+                result.code = command;
+                result.value = value;
+            }
         }
     }
     return result;
