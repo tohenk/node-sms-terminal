@@ -154,17 +154,9 @@ ntAtGsm.factory.prototype.doProcess = function(response) {
     if (response) {
         this.setState({processing: true});
         try {
-            // reprocess incomplete ussd
-            if (this.props.ussd && this.props.ussd.wait && !Array.isArray(response)) {
-                response = this.props.ussd.data + response;
-            }
             var data = new ntAtProcessor.rxdata(this, response);
             this.processor.process(data);
-            // check for ussd completion
-            if (this.props.ussd && this.props.ussd.wait) {
-                this.props.ussd.data = data.code + data.value;
-                this.debug('!! %s: Waiting USSD response to complete', this.name);
-            } else if (data.unprocessed && data.unprocessed.length) {
+            if (data.unprocessed && data.unprocessed.length) {
                 // in some case, on WAVECOM modem, sometime response is not properly
                 // returned in one line
                 const nextdata = this.resolveUnprocessed(data);
@@ -543,7 +535,12 @@ ntAtGsm.factory.prototype.decodeUssd = function(enc, value) {
 ntAtGsm.factory.prototype.query = function(cmd, options) {
     return new Promise((resolve, reject) => {
         options = options || {};
+        const storage = this.saveStorage(cmd);
         this.tx(cmd, options).then((res) => {
+            if (Object.keys(storage).length) {
+                Object.assign(this.props, storage);
+                this.debug('%s: Updating storage information from "%s"', this.name, JSON.stringify(storage));
+            }
             if (res.hasResponse()) {
                 var data = this.doProcess(res.responses);
                 if (typeof options.context == 'object' && typeof data.result == 'object') {
@@ -568,6 +565,41 @@ ntAtGsm.factory.prototype.query = function(cmd, options) {
             }
         });
     });
+}
+
+ntAtGsm.factory.prototype.findMatchedCommand = function(data, cmd, patterns) {
+    const vars = {};
+    Object.keys(patterns).forEach((key) => {
+        vars[key] = '_' + key + '_';
+    });
+    const f = (str, search, replace) => {
+        return str.replace(search, replace);
+    }
+    var str = this.getCmd(cmd, vars);
+    ['+', '='].forEach((escape) => {
+        str = f(str, escape, '\\' + escape);
+    });
+    Object.keys(patterns).forEach((key) => {
+        str = f(str, '_' + key + '_', patterns[key]);
+    });
+    const re = new RegExp(str);
+    var match;
+    if (match = re.exec(data)) {
+        return match[1];
+    }
+}
+
+ntAtGsm.factory.prototype.saveStorage = function(cmd) {
+    const result = {};
+    const storage = this.findMatchedCommand(cmd, ntAtDrv.AT_CMD_SMS_STORAGE_SET, {STORAGE: '([A-Z]+)'});
+    if (storage != undefined) {
+        result.storage = storage;
+    }
+    const storageIndex = this.findMatchedCommand(cmd, ntAtDrv.AT_CMD_SMS_READ, {SMS_ID: '(\\d+)'});
+    if (storageIndex != undefined) {
+        result.storageIndex = parseInt(storageIndex);
+    }
+    return result;
 }
 
 ntAtGsm.factory.prototype.sendPDU = function(phoneNumber, message, hash) {

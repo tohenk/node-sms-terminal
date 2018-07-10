@@ -44,10 +44,11 @@ ntAtProcessor.factory.prototype.process = function(data) {
     if (matches.length) {
         matches.forEach((match) => {
             Object.assign(data, {
-                matched: match.matched,
                 index: match.index,
                 code: match.code,
-                value: match.value
+                value: match.value,
+                tokens: match.tokens,
+                matched: match.matched
             });
             const result = match.handler(data);
             if (typeof result == 'object') {
@@ -71,7 +72,7 @@ ntAtProcessor.factory.prototype.handler = function(data) {
     const matches = [];
     for (var i = 0; i < this.processors.length; i++) {
         var proc = this.processors[i];
-        var result = data.match(proc.cmd);
+        var result = data.match(proc);
         if (typeof result == 'object') {
             result.handler = proc.handler;
             matches.push(result);
@@ -83,168 +84,161 @@ ntAtProcessor.factory.prototype.handler = function(data) {
     return matches;
 }
 
-ntAtProcessor.factory.prototype.add = function(cmd, handler) {
-    this.processors.push({
+ntAtProcessor.factory.prototype.add = function(cmd, len, separator, handler) {
+    const processor = {
         cmd: cmd,
-        handler: handler
-    });
+        len: len
+    }
+    if (typeof separator == 'function') {
+        handler = separator;
+        separator = null;
+    }
+    if (separator) processor.separator = separator;
+    processor.handler = handler;
+    this.processors.push(processor);
 }
 
 ntAtProcessor.factory.prototype.register = function() {
-    this.add(ntAtDrv.AT_RESPONSE_CME_ERROR, (data) => this.handleCME(data));
-    this.add(ntAtDrv.AT_RESPONSE_CMS_ERROR, (data) => this.handleCMS(data));
-    this.add(ntAtDrv.AT_RESPONSE_SMSC, (data) => this.handleCSCA(data));
-    this.add(ntAtDrv.AT_RESPONSE_COPS, (data) => this.handleCOPS(data));
-    this.add(ntAtDrv.AT_RESPONSE_CSCS, (data) => this.handleCSCS(data));
-    this.add(ntAtDrv.AT_RESPONSE_CLCK, (data) => this.handleCLCK(data));
-    this.add(ntAtDrv.AT_RESPONSE_CSQ, (data) => this.handleCSQ(data));
-    this.add(ntAtDrv.AT_RESPONSE_RSSI, (data) => this.handleRSSI(data));
-    this.add(ntAtDrv.AT_RESPONSE_RING, (data) => this.handleRING(data));
-    this.add(ntAtDrv.AT_RESPONSE_CLIP, (data) => this.handleCLIP(data));
-    this.add(ntAtDrv.AT_RESPONSE_CALL_END, (data) => this.handleCEND(data));
-    this.add(ntAtDrv.AT_RESPONSE_NEW_MESSAGE_DIRECT, (data) => this.handleCMT(data));
-    this.add(ntAtDrv.AT_RESPONSE_NEW_MESSAGE, (data) => this.handleCMTI(data));
-    this.add(ntAtDrv.AT_RESPONSE_DELIVERY_REPORT_DIRECT, (data) => this.handleCDS(data));
-    this.add(ntAtDrv.AT_RESPONSE_DELIVERY_REPORT, (data) => this.handleCDSI(data));
-    this.add(ntAtDrv.AT_RESPONSE_CPMS, (data) => this.handleCPMS(data));
-    this.add(ntAtDrv.AT_RESPONSE_CMGF, (data) => this.handleCMGF(data));
-    this.add(ntAtDrv.AT_RESPONSE_CMGL, (data) => this.handleCMGL(data));
-    this.add(ntAtDrv.AT_RESPONSE_CMGR, (data) => this.handleCMGR(data));
-    this.add(ntAtDrv.AT_RESPONSE_CMGS, (data) => this.handleCMGS(data));
-    this.add(ntAtDrv.AT_RESPONSE_CUSD, (data) => this.handleCUSD(data));
-    this.add(ntAtDrv.AT_RESPONSE_MEM_FULL, (data) => this.handleMEMFULL(data));
+    this.add(ntAtDrv.AT_RESPONSE_CME_ERROR, 1, (data) => this.handleCME(data));
+    this.add(ntAtDrv.AT_RESPONSE_CMS_ERROR, 1, (data) => this.handleCMS(data));
+    this.add(ntAtDrv.AT_RESPONSE_SMSC, 2, (data) => this.handleCSCA(data));
+    this.add(ntAtDrv.AT_RESPONSE_COPS, 1, (data) => this.handleCOPS(data));
+    this.add(ntAtDrv.AT_RESPONSE_CSCS, 1, (data) => this.handleCSCS(data));
+    this.add(ntAtDrv.AT_RESPONSE_CLCK, 1, (data) => this.handleCLCK(data));
+    this.add(ntAtDrv.AT_RESPONSE_CSQ, 2, (data) => this.handleCSQ(data));
+    this.add(ntAtDrv.AT_RESPONSE_RSSI, 1, (data) => this.handleRSSI(data));
+    this.add(ntAtDrv.AT_RESPONSE_RING, 0, (data) => this.handleRING(data));
+    this.add(ntAtDrv.AT_RESPONSE_CLIP, 1, (data) => this.handleCLIP(data));
+    this.add(ntAtDrv.AT_RESPONSE_CALL_END, 1, (data) => this.handleCEND(data));
+    this.add(ntAtDrv.AT_RESPONSE_NEW_MESSAGE_DIRECT, 2, (data) => this.handleCMT(data));
+    this.add(ntAtDrv.AT_RESPONSE_NEW_MESSAGE, 2, (data) => this.handleCMTI(data));
+    this.add(ntAtDrv.AT_RESPONSE_DELIVERY_REPORT_DIRECT, 1, (data) => this.handleCDS(data));
+    this.add(ntAtDrv.AT_RESPONSE_DELIVERY_REPORT, 2, (data) => this.handleCDSI(data));
+    this.add(ntAtDrv.AT_RESPONSE_CPMS, 3, (data) => this.handleCPMS(data));
+    this.add(ntAtDrv.AT_RESPONSE_CMGF, 1, (data) => this.handleCMGF(data));
+    this.add(ntAtDrv.AT_RESPONSE_CMGL, 4, (data) => this.handleCMGL(data));
+    this.add(ntAtDrv.AT_RESPONSE_CMGR, 3, (data) => this.handleCMGR(data));
+    this.add(ntAtDrv.AT_RESPONSE_CMGS, 1, (data) => this.handleCMGS(data));
+    this.add(ntAtDrv.AT_RESPONSE_CUSD, 1, '\n', (data) => this.handleCUSD(data));
+    this.add(ntAtDrv.AT_RESPONSE_MEM_FULL, 1, (data) => this.handleMEMFULL(data));
 }
 
 ntAtProcessor.factory.prototype.readPDU = function(data) {
     const result = [];
-    const len = data.matched == ntAtDrv.AT_RESPONSE_CMGR ? 3 : 4;
-    while (data.responses.length) {
-        var header = '';
-        var pdu = '';
-        var tokens = [];
-        // detect header
-        while (true) {
-            if (!data.responses.length) break;
-            header += data.responses.shift();
-            tokens = token.split(header.substr(data.code.length));
-            if (tokens.length == len) break;
+    var len, tokens, next, pdu, startIndex, processedIndex;
+    var index = data.index;
+    switch (data.matched.cmd) {
+        case ntAtDrv.AT_RESPONSE_DELIVERY_REPORT_DIRECT:
+            len = 1;
+            break;
+        case ntAtDrv.AT_RESPONSE_NEW_MESSAGE_DIRECT:
+            len = 2;
+            break;
+        case ntAtDrv.AT_RESPONSE_CMGR:
+            len = 3;
+            break;
+        case ntAtDrv.AT_RESPONSE_CMGL:
+            len = 4;
+            break;
+    }
+    while (true) {
+        if (index >= data.responses.length) break;
+        startIndex = index;
+        if (index == data.index) {
+            tokens = data.tokens;
+        } else {
+            tokens = next;
         }
-        // concatenate PDU in case PDU is not in one line
-        while (true) {
-            if (!data.responses.length) break;
-            if (data.responses[0].indexOf(data.code) == 0) break;
-            pdu += data.responses.shift();
-        }
-        if (pdu.length && tokens.length == len) {
-            var msg = ntAtSMS.decode(pdu);
-            var tplen = data.matched == ntAtDrv.AT_RESPONSE_CMGR ? tokens[2] : tokens[3];
-            this.parent.debug('%s: PDU = %s, tplen = %d, expected = %d', this.parent.name, pdu, msg.tplen, tplen);
-            if (msg && msg.tplen == tplen) {
-                result.push({
-                    storage: data.matched == ntAtDrv.AT_RESPONSE_CMGR ? this.parent.queue.storage :
-                        this.parent.props.storage,
-                    index: data.matched == ntAtDrv.AT_RESPONSE_CMGR ? this.parent.queue.index : tokens[0],
-                    status: data.matched == ntAtDrv.AT_RESPONSE_CMGR ? tokens[0] : tokens[1],
-                    message: msg
-                });
+        if (!tokens) break;
+        pdu = '';
+        if (tokens.length >= len) {
+            while (true) {
+                index++;
+                if (index >= data.responses.length) break;
+                var match = data.matchAt(data.matched, index);
+                if (match.matched) {
+                    next = match.tokens;
+                    break;
+                } else {
+                    pdu += data.responses[index];
+                }
+            }
+            if (pdu.length) {
+                if (processedIndex == undefined) processedIndex = startIndex;
+                var msg = ntAtSMS.decode(pdu);
+                var tplen = tokens[len - 1];
+                this.parent.debug('%s: PDU = %s, tplen = %d, expected = %d [%s]', this.parent.name, pdu, msg.tplen, tplen,
+                    msg.tplen == tplen ? 'OK' : 'SKIPPED');
+                if (msg.tplen == tplen) {
+                    var storage, storageIndex, storageStatus;
+                    switch (data.matched.cmd) {
+                        case ntAtDrv.AT_RESPONSE_DELIVERY_REPORT_DIRECT:
+                            break;
+                        case ntAtDrv.AT_RESPONSE_NEW_MESSAGE_DIRECT:
+                            break;
+                        case ntAtDrv.AT_RESPONSE_CMGR:
+                            storage = this.parent.queue ? this.parent.queue.storage : this.parent.props.storage;
+                            storageIndex = this.parent.queue ? this.parent.queue.index : this.parent.props.storageIndex;
+                            storageStatus = tokens[0];
+                            if (this.parent.queue) this.parent.queue = null;
+                            break;
+                        case ntAtDrv.AT_RESPONSE_CMGL:
+                            storage = this.parent.props.storage;
+                            storageIndex = tokens[0];
+                            storageStatus = tokens[1];
+                            break;
+                    }
+                    result.push({storage: storage, index: storageIndex, status: storageStatus, message: msg});
+                }
             }
         }
+    }
+    if (processedIndex != undefined) {
+        data.responses.splice(processedIndex, index - processedIndex + 1);
     }
     return result;
 }
 
-ntAtProcessor.factory.prototype.queueReadStorage = function(data) {
-    const tokens = token.split(data.value);
-    if (tokens.length) {
-        return {
-            queues: [{
-                op: 'read',
-                storage: tokens[0],
-                index: tokens[1]
-            }]
-        }
+ntAtProcessor.factory.prototype.readStorage = function(data) {
+    return {
+        queues: [{
+            op: 'read',
+            storage: data.tokens[0],
+            index: data.tokens[1]
+        }]
     }
-}
-
-ntAtProcessor.factory.prototype.concatUssdResponse = function(data, callback) {
-    var response = data.value;
-    var index = data.index;
-    // concat responses
-    while (true) {
-        index++;
-        if (index == data.responses.length) break;
-        if (!callback(response)) break;
-        response += '\r\n' + data.responses[index];
-    }
-    // remove already concatenated response
-    while (index > data.index) {
-        data.responses.splice(index, 1);
-        index--;
-    }
-    data.value = response;
-}
-
-ntAtProcessor.factory.prototype.findUssdQuote = function(data) {
-    const firstQuote = data.value.indexOf('"');
-    if (firstQuote >= 0) {
-        this.concatUssdResponse(data, (res) => {
-            return res.lastIndexOf('"') == firstQuote;
-        });
-        // check if USSD response is complete
-        return data.value.lastIndexOf('"') > firstQuote ? false : true;
-    }
-}
-
-ntAtProcessor.factory.prototype.fixUssdResponse = function(data) {
-    var quoted = this.findUssdQuote(data);
-    if (quoted != undefined) return quoted;
-    // in some case, the quote go beyond next line
-    if (data.value.substr(-1) == ',') {
-        this.concatUssdResponse(data, (res) => {
-            return res.indexOf('"') < 0;
-        });
-        var quoted = this.findUssdQuote(data);
-        if (quoted != undefined) return quoted;
-    }
-    return false;
 }
 
 ntAtProcessor.factory.prototype.handleCME = function(data) {
     // +CME ERROR: 100
     return {
-        cme_error: parseInt(data.value)
+        cme_error: data.tokens[0]
     }
 }
 
 ntAtProcessor.factory.prototype.handleCMS = function(data) {
     // +CMS ERROR: 500
     return {
-        cms_error: parseInt(data.value)
+        cms_error: data.tokens[0]
     }
 }
 
 ntAtProcessor.factory.prototype.handleCSCA = function(data) {
     // +CSCA: "+628315000032",145
-    const tokens = token.split(data.value);
-    if (tokens.length) {
-        return {
-            smsc: tokens[0]
-        }
+    return {
+        smsc: data.tokens[0]
     }
 }
 
 ntAtProcessor.factory.prototype.handleCOPS = function(data) {
     // +COPS: <mode>,<format>,<oper>,<rat>
-    const tokens = token.split(data.value);
-    if (tokens.length) {
-        if (!Array.isArray(tokens[0])) {
-            return {
-                network: ntAtNetwork.from(tokens)
-            }
-        } else {
-            return {
-                networks: ntAtNetwork.list(tokens)
-            }
+    if (!Array.isArray(data.tokens[0])) {
+        return {
+            network: ntAtNetwork.from(data.tokens)
+        }
+    } else {
+        return {
+            networks: ntAtNetwork.list(data.tokens)
         }
     }
 }
@@ -252,16 +246,13 @@ ntAtProcessor.factory.prototype.handleCOPS = function(data) {
 ntAtProcessor.factory.prototype.handleCSCS = function(data) {
     // +CSCS: "GSM"
     // +CSCS: ("GSM","IRA","8859-1","UTF-8","UCS2")
-    const tokens = token.split(data.value);
-    if (tokens.length) {
-        if (Array.isArray(tokens[0])) {
-            return {
-                charsets: tokens[0]
-            }
-        } else {
-            return {
-                charset: tokens[0]
-            }
+    if (Array.isArray(data.tokens[0])) {
+        return {
+            charsets: data.tokens[0]
+        }
+    } else {
+        return {
+            charset: data.tokens[0]
         }
     }
 }
@@ -269,16 +260,13 @@ ntAtProcessor.factory.prototype.handleCSCS = function(data) {
 ntAtProcessor.factory.prototype.handleCLCK = function(data) {
     // +CLCK: 1
     // +CLCK: ("CS","PS","..","..","..")
-    const tokens = token.split(data.value);
-    if (tokens.length) {
-        if (!isNaN(tokens[0])) {
-            return {
-                keylock: tokens[0] == 1
-            }
-        } else {
-            return {
-                locks: tokens[0]
-            }
+    if (!isNaN(data.tokens[0])) {
+        return {
+            keylock: data.tokens[0] == 1
+        }
+    } else {
+        return {
+            locks: data.tokens[0]
         }
     }
 }
@@ -286,23 +274,18 @@ ntAtProcessor.factory.prototype.handleCLCK = function(data) {
 ntAtProcessor.factory.prototype.handleCSQ = function(data) {
     // +CSQ: 99,99
     // ^HCSQ:"LTE",46,36,81,14
-    const tokens = token.split(data.value);
-    if (tokens.length) {
-        if (isNaN(tokens[0])) {
-            tokens.shift();
-        }
-        return {
-            rssi: parseInt(tokens[0])
-        }
+    if (isNaN(data.tokens[0])) {
+        data.tokens.shift();
+    }
+    return {
+        rssi: data.tokens[0]
     }
 }
 
 ntAtProcessor.factory.prototype.handleRSSI = function(data) {
     // ^CRSSI: 31
-    if (!isNaN(data.value)) {
-        return {
-            rssi: parseInt(data.value)
-        }
+    return {
+        rssi: data.tokens[0]
     }
 }
 
@@ -314,11 +297,8 @@ ntAtProcessor.factory.prototype.handleRING = function(data) {
 
 ntAtProcessor.factory.prototype.handleCLIP = function(data) {
     // +CLIP: "+6281357909840",145,,,"Someone"
-    const tokens = token.split(data.value);
-    if (tokens.length) {
-        return {
-            caller: tokens[0]
-        }
+    return {
+        caller: data.tokens[0]
     }
 }
 
@@ -340,7 +320,7 @@ ntAtProcessor.factory.prototype.handleCMT = function(data) {
 
 ntAtProcessor.factory.prototype.handleCMTI = function(data) {
     // +CMTI: "ME",268516608
-    return this.queueReadStorage(data);
+    return this.readStorage(data);
 }
 
 ntAtProcessor.factory.prototype.handleCDS = function(data) {
@@ -353,33 +333,28 @@ ntAtProcessor.factory.prototype.handleCDS = function(data) {
 }
 
 ntAtProcessor.factory.prototype.handleCDSI = function(data) {
-    return this.queueReadStorage(data);
+    return this.readStorage(data);
 }
 
 ntAtProcessor.factory.prototype.handleCPMS = function(data) {
     // +CPMS: "SM",6,40,"SM",6,40,"SM",6,40
-    const tokens = token.split(data.value);
-    if (tokens.length) {
-        const result = {};
-        if (isNaN(tokens[0])) {
-            result.storage = tokens[0];
-        }
-        if (tokens.length > 1 && !isNaN(tokens[1])) {
-            result.storageUsed = parseInt(tokens[1]);
-        }
-        if (tokens.length > 2 && !isNaN(tokens[2])) {
-            result.storageTotal = parseInt(tokens[2]);
-        }
-        return result;
+    const result = {};
+    if (isNaN(data.tokens[0])) {
+        result.storage = data.tokens[0];
     }
+    if (data.tokens.length > 1 && !isNaN(data.tokens[1])) {
+        result.storageUsed = data.tokens[1];
+    }
+    if (data.tokens.length > 2 && !isNaN(data.tokens[2])) {
+        result.storageTotal = data.tokens[2];
+    }
+    return result;
 }
 
 ntAtProcessor.factory.prototype.handleCMGF = function(data) {
     // +CMGF: 0
-    if (!isNaN(data.value)) {
-        return {
-            smsMode: parseInt(data.value)
-        }
+    return {
+        smsMode: data.tokens[0]
     }
 }
 
@@ -408,7 +383,7 @@ ntAtProcessor.factory.prototype.handleCMGR = function(data) {
 ntAtProcessor.factory.prototype.handleCMGS = function(data) {
     // +CMGS: 29
     return {
-        messageReference: parseInt(data.value)
+        messageReference: data.tokens[0]
     }
 }
 
@@ -416,35 +391,25 @@ ntAtProcessor.factory.prototype.handleCUSD = function(data) {
     // +CUSD: 1
     // +CUSD: (0-2)
     // +CUSD: 0,<str>,<dcs>
-    const incomplete = this.fixUssdResponse(data);
-    if (incomplete) {
-        return {
-            ussd: {wait: true}
+    if (data.tokens.length >= 3) {
+        // 0 -> code, 1 -> data, 2 -> dcs
+        const enc = data.tokens[2];
+        var message = data.tokens[1];
+        if (parseInt(this.parent.getCmd(ntAtDrv.AT_PARAM_USSD_ENCODING)) != enc ||
+            1 == parseInt(this.parent.getCmd(ntAtDrv.AT_PARAM_USSD_ENCODED)) ||
+            1 == parseInt(this.parent.getCmd(ntAtDrv.AT_PARAM_USSD_RESPONSE_ENCODED))) {
+            message = this.parent.decodeUssd(enc, message);
         }
-    } else {
-        const tokens = token.split(data.value);
-        if (tokens.length) {
-            if (tokens.length >= 3) {
-                // 0 -> code, 1 -> data, 2 -> dcs
-                const enc = tokens[2];
-                var message = tokens[1];
-                if (parseInt(this.parent.getCmd(ntAtDrv.AT_PARAM_USSD_ENCODING)) != enc ||
-                    1 == parseInt(this.parent.getCmd(ntAtDrv.AT_PARAM_USSD_ENCODED)) ||
-                    1 == parseInt(this.parent.getCmd(ntAtDrv.AT_PARAM_USSD_RESPONSE_ENCODED))) {
-                    message = this.parent.decodeUssd(enc, message);
-                }
-                return {
-                    ussd: {
-                        code: tokens[0],
-                        message: message
-                    }
-                }
-            } else if (!isNaN(tokens[0])) {
-                return {
-                    ussd: {
-                        code: tokens[0]
-                    }
-                }
+        return {
+            ussd: {
+                code: data.tokens[0],
+                message: message
+            }
+        }
+    } else if (!isNaN(data.tokens[0])) {
+        return {
+            ussd: {
+                code: data.tokens[0]
             }
         }
     }
@@ -452,11 +417,8 @@ ntAtProcessor.factory.prototype.handleCUSD = function(data) {
 
 ntAtProcessor.factory.prototype.handleMEMFULL = function(data) {
     // ^SMMEMFULL: "SM"
-    const tokens = token.split(data.value);
-    if (tokens.length) {
-        return {
-            memfull: tokens[0]
-        }
+    return {
+        memfull: data.tokens[0]
     }
 }
 
@@ -477,27 +439,59 @@ ntAtProcessor.rxdata.prototype.clean = function() {
     }
 }
 
-ntAtProcessor.rxdata.prototype.match = function(cmd) {
-    for (var i = 0; i < this.responses.length; i++) {
-        var result = this.matchAt(cmd, i);
+ntAtProcessor.rxdata.prototype.match = function(processor) {
+    var i = 0;
+    while (true) {
+        if (i == this.responses.length) break;
+        var result = this.matchAt(processor, i);
         if (result.matched) {
             return result;
         }
+        i++;
     }
 }
 
-ntAtProcessor.rxdata.prototype.matchAt = function(cmd, index) {
+ntAtProcessor.rxdata.prototype.matchAt = function(processor, index) {
     const result = {};
     if (index < this.responses.length) {
-        const command = this.parent.getCmd(cmd);
+        const command = this.parent.getCmd(processor.cmd);
         const response = this.responses[index];
         if (this.isMatch(command, response)) {
-            const value = response.substring(command.length).trim();
-            if (value.length) {
+            var found = true, value = null, tokens = null;
+            if (processor.len > 0) {
+                found = false;
+                value = response.substring(command.length).trimLeft();
+                if (value.length) {
+                    var nextIndex = index;
+                    while (true) {
+                        if (nextIndex == this.responses.length) break;
+                        if (nextIndex > index) {
+                            if (processor.separator) value += processor.separator;
+                            value += this.responses[nextIndex];
+                        }
+                        try {
+                            tokens = token.split(value, {throwError: true});
+                        }
+                        catch (e) {
+                            nextIndex++;
+                            continue;
+                        }
+                        if (tokens && tokens.length >= processor.len) {
+                            found = true;
+                        }
+                        if (found) break;
+                    }
+                    if (found && nextIndex > index) {
+                        this.responses.splice(nextIndex, nextIndex - index);
+                    }
+                }
+            }
+            if (found) {
                 result.index = index;
-                result.matched = cmd;
                 result.code = command;
                 result.value = value;
+                result.tokens = tokens;
+                result.matched = processor;
             }
         }
     }
