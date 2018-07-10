@@ -103,26 +103,21 @@ router.post('/:term/at', function(req, res, next) {
     const term = req.app.term;
     const terminal = term.get(req.params.term);
     if (terminal) {
-      terminal.tx(req.body.command)
-        .then((data) => {
+      terminal.query(req.body.command)
+        .then((res) => {
           result.success = true;
-          if (data.hasResponse()) {
-            result.notice = util.format('Command return OK [%s]', data.res());
+          if (res) {
+            result.notice = util.format('Command return OK [%s]', JSON.stringify(res));
           } else {
             result.notice = 'Command return OK';
           }
           res.json(result);
         })
-        .catch((data) => {
-          if (data.error) {
-            if (data.hasResponse()) {
-              result.error = util.format('Command return ERROR [%s]', data.res());
-            } else {
-              result.error = 'Command return ERROR';
-            }
-          }
-          if (data.timeout) {
-            result.error = 'Command return TIMEOUT';
+        .catch((err) => {
+          if (err instanceof Error) {
+            result.error = err.message;
+          } else {
+            result.error = err;
           }
           res.json(result);
         })
