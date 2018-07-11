@@ -46,6 +46,7 @@ ntAtGsm.factory = function(name, stream, config) {
     ntAtModem.factory.call(this, name, stream, config);
     this.processor = new ntAtProcessor.factory(this);
     this.info = {};
+    this.queuing = false;
     this.messages = [];
     this.options = {
         deleteMessageOnRead: this.getConfig('deleteMessageOnRead', false),
@@ -304,7 +305,7 @@ ntAtGsm.factory.prototype.addQueues = function(queues) {
                     });
                     break;
                 case 'command':
-                    this.query(queue.data).then(() => {
+                    this.query(queue.data, queue.options).then(() => {
                         next();
                     }).catch(() => {
                         next();
@@ -534,37 +535,53 @@ ntAtGsm.factory.prototype.decodeUssd = function(enc, value) {
 
 ntAtGsm.factory.prototype.query = function(cmd, options) {
     return new Promise((resolve, reject) => {
-        options = options || {};
-        const storage = this.saveStorage(cmd);
-        this.tx(cmd, options).then((res) => {
-            if (Object.keys(storage).length) {
-                Object.assign(this.props, storage);
-                this.debug('%s: Updating storage information from "%s"', this.name, JSON.stringify(storage));
-            }
-            if (res.hasResponse()) {
-                var data = this.doProcess(res.responses);
-                if (typeof options.context == 'object' && typeof data.result == 'object') {
-                    Object.assign(options.context, data.result);
+        if (this.queuing) {
+            this.queuing = false;
+            const queues = [{
+                op: 'command',
+                data: cmd,
+                options: options
+            }];
+            this.propChanged({queues: queues});
+            resolve();
+        } else {
+            options = options || {};
+            const storage = this.saveStorage(cmd);
+            this.tx(cmd, options).then((res) => {
+                if (Object.keys(storage).length) {
+                    Object.assign(this.props, storage);
+                    this.debug('%s: Updating storage information from "%s"', this.name, JSON.stringify(storage));
                 }
-                resolve(data.result);
-            } else {
-                resolve();
-            }
-        }).catch((err) => {
-            if (err instanceof ntAtModem.txdata) {
-                if (err.timeout) {
-                    reject(new Error(util.format('%s: Operation timeout', err.data)));
-                }
-                if (err.error && err.hasResponse()) {
-                    reject(new Error(util.format('%s: %s', err.data, err.res())));
+                if (res.hasResponse()) {
+                    var data = this.doProcess(res.responses);
+                    if (typeof options.context == 'object' && typeof data.result == 'object') {
+                        Object.assign(options.context, data.result);
+                    }
+                    resolve(data.result);
                 } else {
-                    reject(new Error(util.format('%s: Operation failed', err.data)));
+                    resolve();
                 }
-            } else {
-                reject(err);
-            }
-        });
+            }).catch((err) => {
+                if (err instanceof ntAtModem.txdata) {
+                    if (err.timeout) {
+                        reject(new Error(util.format('%s: Operation timeout', err.data)));
+                    }
+                    if (err.error && err.hasResponse()) {
+                        reject(new Error(util.format('%s: %s', err.data, err.res())));
+                    } else {
+                        reject(new Error(util.format('%s: Operation failed', err.data)));
+                    }
+                } else {
+                    reject(err);
+                }
+            });
+        }
     });
+}
+
+ntAtGsm.factory.prototype.asQueue = function() {
+    this.queuing = true;
+    return this;
 }
 
 ntAtGsm.factory.prototype.findMatchedCommand = function(data, cmd, patterns) {
