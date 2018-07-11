@@ -480,6 +480,12 @@ AppTerm.notifyActivity = function(activity) {
 }
 
 AppTerm.checkPendingActivity = function() {
+    Object.keys(this.ports).forEach((portName) => {
+        const gsm = this.Pool.get(portName);
+        if (gsm && gsm.info.imsi) {
+            gsm.asQueue().listMessage(AtConst.SMS_STAT_RECV_UNREAD);
+        }
+    });
     AppStorage.getPendingActivities().then((results) => {
         console.log('Processing pending activity: %d', results.length);
         const q = new AppQueue.Queue(results, (activity) => {
