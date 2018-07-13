@@ -26,18 +26,19 @@
  * Express core middleware.
  */
 
+const path = require('path');
 const script = require('./../script');
 
 var Blocks = {};
 
 function CoreHelper(options) {
     return (req, res, next) => {
-        attachHelper(res);
+        attachHelper(req, res);
         next();
     }
 }
 
-function attachHelper(res) {
+function attachHelper(req, res) {
     const app = res.app;
     if (!res.locals.script) {
         res.locals.script = script;
@@ -50,10 +51,11 @@ function attachHelper(res) {
         res.render = (view, options) => {
             options = options || {};
             startRender();
+            if (res.locals.viewdir) view = path.join(res.locals.viewdir, view);
             res._render(view, options, (err, str) => {
                 if (err) return res.req.next(err);
                 finishRender();
-                var layout = res.locals.layout || app.locals.layout || 'default';
+                var layout = res.locals.layout || app.locals.layout || req.xhr ? 'xhr' : 'default';
                 var title = options.title || '';
                 var sitetitle = app.title;
                 if (title) sitetitle = `${title} &ndash; ${sitetitle}`;
@@ -84,6 +86,20 @@ function attachHelper(res) {
             } else {
                 Blocks[name] = content;
             }
+        }
+    }
+    if (!res.locals.jsloader) {
+        res.locals.jsloader = (assets) => {
+            const loader = require('./../script/Loader').instance().getScript();
+            const queues = JSON.stringify(assets, null, 4);
+            return `<script type="text/javascript">
+//<![CDATA[
+${loader}
+// load all assets
+document.ntloader.load(${queues});
+//]]>
+</script>
+`;
         }
     }
 }
