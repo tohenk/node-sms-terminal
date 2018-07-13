@@ -41,6 +41,9 @@ function Security(options) {
         if (req.session.user.authenticated) {
             return next();
         }
+        if (req.xhr) {
+            return res.sendStatus(401);
+        }
         res.redirect(loginroute + '?r=' + path);
     }
 }
