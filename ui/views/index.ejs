@@ -1,6 +1,7 @@
 <div class="ui stackable top attached tabular menu">
   <a class="active item" data-tab="activity">Activity</a>
   <a class="item" data-tab="log">Logs</a>
+  <a class="item" data-tab="client">Clients <span class="ui tiny label">0</span></a>
   <% term.getTerminals(true).forEach((port) => { -%>
   <a class="item" data-tab="<%= port %>"><%= port %></a>
   <% }); %>
@@ -10,6 +11,9 @@
 </div>
 <div class="ui bottom attached tab segment" data-tab="log">
   <%- include('log') %>
+</div>
+<div class="ui bottom attached tab segment" data-tab="client">
+  <%- include('client') %>
 </div>
 <%- include('termhandler') %>
 <% term.getTerminals(true).forEach((port) => { -%>
@@ -43,6 +47,9 @@ $.uiCon = {
         self.socket.on('activity', function(data) {
             $.log.add(data);
         });
+        self.socket.on('client', function(type) {
+            $.client.load();
+        });
         self.socket.on('new-activity', function(type) {
             $.activity.load();
         });
@@ -55,6 +62,7 @@ $.uiCon = {
 $('.menu .item').tab();
 $.activity.load();
 $.log.load();
+$.client.load();
 $.tasks.init();
 $.uiCon.init();
 `); %>

@@ -588,6 +588,7 @@ AppTerm.setSocketIo = function(io) {
             const idx = this.clients.indexOf(socket);
             if (idx >= 0) {
                 this.clients.splice(idx, 1);
+                if (this.uiCon) this.uiCon.emit('client');
             }
         });
         socket.on('auth', (secret) => {
@@ -597,6 +598,7 @@ AppTerm.setSocketIo = function(io) {
                 clearTimeout(timeout);
                 this.clients.push(socket);
                 socket.join(this.ClientRoom);
+                if (this.uiCon) this.uiCon.emit('client');
             } else {
                 console.log('Client is NOT authenticated: %s', socket.id);
             }

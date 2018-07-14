@@ -97,6 +97,21 @@ router.get('/activity-log', function(req, res, next) {
   getActivityLog(req, res, next);
 });
 
+router.get('/client', function(req, res, next) {
+  const result = [];
+  const term = req.app.term;
+  var nr = 0;
+  term.clients.forEach((socket) => {
+    const info = {
+      nr: ++nr,
+      id: socket.id,
+      address: socket.handshake.address
+    }
+    result.push(info);
+  });
+  res.json({items: result});
+});
+
 router.post('/:term/at', function(req, res, next) {
   const result = {success: false};
   if (req.params.term && req.body.command) {
