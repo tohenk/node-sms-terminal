@@ -20,10 +20,14 @@ $.term = {
             self.terms[name].time = data.time;
         }
     },
-    addTerm: function(name, options) {
+    init: function(ports) {
         var self = this;
-        self.terms[name] = {
-            log: options.log
+        for (var i = 0; i < ports.length; i++) {
+            var port = ports[i];
+            self.terms[port] = {
+                log: $('.log.' + port)
+            }
+            self.getLog(port);
         }
     }
 }

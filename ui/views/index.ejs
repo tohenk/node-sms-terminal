@@ -2,9 +2,9 @@
   <a class="active item" data-tab="activity">Activity</a>
   <a class="item" data-tab="log">Logs</a>
   <a class="item" data-tab="client">Clients <span class="ui tiny label">0</span></a>
-  <% term.getTerminals(true).forEach((port) => { -%>
-  <a class="item" data-tab="<%= port %>"><%= port %></a>
-  <% }); %>
+  <%_ if((terms = term.getTerminals(true)) && terms.length) { -%>
+  <a class="item" data-tab="port">Ports <span class="ui tiny label"><%= terms.length %></span></a>
+  <%_ } -%>
 </div>
 <div class="ui bottom attached active tab segment" data-tab="activity">
   <%- include('activity') %>
@@ -16,11 +16,11 @@
   <%- include('client') %>
 </div>
 <%- include('termhandler') %>
-<% term.getTerminals(true).forEach((port) => { -%>
-<div class="ui bottom attached tab segment" data-tab="<%= port %>">
-  <%- include('term', {port: port}) %>
+<% if(terms.length) { -%>
+<div class="ui bottom attached tab segment" data-tab="port">
+  <%- include('term') %>
 </div>
-<% }); %>
+<% } -%>
 <%- include('menu') %>
 <% script.create('jQuery')
   .useDependencies(['SocketIO'])
