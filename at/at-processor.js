@@ -62,7 +62,7 @@ ntAtProcessor.factory.prototype.process = function(data) {
     }
     data.unprocessed = data.responses;
     for (var i = matches.length - 1; i >= 0; i--) {
-        if (data.unprocessed[matches[i].index]) {
+        if (data.unprocessed[matches[i].index] != undefined) {
             data.unprocessed.splice(matches[i].index, 1);
         }
     }
@@ -125,22 +125,9 @@ ntAtProcessor.factory.prototype.register = function() {
 
 ntAtProcessor.factory.prototype.readPDU = function(data) {
     const result = [];
-    var len, tokens, next, pdu, startIndex, processedIndex;
+    const len = data.matched.len;
+    var tokens, next, pdu, startIndex, processedIndex;
     var index = data.index;
-    switch (data.matched.cmd) {
-        case ntAtDrv.AT_RESPONSE_DELIVERY_REPORT_DIRECT:
-            len = 1;
-            break;
-        case ntAtDrv.AT_RESPONSE_NEW_MESSAGE_DIRECT:
-            len = 2;
-            break;
-        case ntAtDrv.AT_RESPONSE_CMGR:
-            len = 3;
-            break;
-        case ntAtDrv.AT_RESPONSE_CMGL:
-            len = 4;
-            break;
-    }
     while (true) {
         if (index >= data.responses.length) break;
         startIndex = index;
@@ -340,13 +327,13 @@ ntAtProcessor.factory.prototype.handleCPMS = function(data) {
     // +CPMS: "SM",6,40,"SM",6,40,"SM",6,40
     const result = {};
     if (isNaN(data.tokens[0])) {
-        result.storage = data.tokens[0];
+        result.storage = data.tokens.shift();
     }
-    if (data.tokens.length > 1 && !isNaN(data.tokens[1])) {
-        result.storageUsed = data.tokens[1];
-    }
-    if (data.tokens.length > 2 && !isNaN(data.tokens[2])) {
-        result.storageTotal = data.tokens[2];
+    if (data.tokens.length >= 2) {
+        var value = data.tokens.shift();
+        if (!isNaN(value)) result.storageUsed = value;
+        var value = data.tokens.shift();
+        if (!isNaN(value)) result.storageTotal = value;
     }
     return result;
 }
@@ -457,29 +444,34 @@ ntAtProcessor.rxdata.prototype.matchAt = function(processor, index) {
         const command = this.parent.getCmd(processor.cmd);
         const response = this.responses[index];
         if (this.isMatch(command, response)) {
-            var found = true, value = null, tokens = null;
-            if (processor.len > 0) {
-                found = false;
+            var value = null, tokens = null;
+            var found = processor.len == 0 ? true : false; 
+            if (!found) {
                 value = response.substring(command.length).trimLeft();
                 if (value.length) {
+                    var okay;
                     var nextIndex = index;
                     while (true) {
-                        if (nextIndex == this.responses.length) break;
+                        if (nextIndex >= this.responses.length) break;
                         if (nextIndex > index) {
                             if (processor.separator) value += processor.separator;
                             value += this.responses[nextIndex];
                         }
+                        okay = true;
                         try {
                             tokens = token.split(value, {throwError: true});
                         }
                         catch (e) {
-                            nextIndex++;
-                            continue;
+                            okay = false;
                         }
-                        if (tokens && tokens.length >= processor.len) {
+                        if (okay && tokens.length >= processor.len) {
                             found = true;
                         }
-                        if (found) break;
+                        if (found) {
+                            break;
+                        } else {
+                            nextIndex++;
+                        }
                     }
                     if (found && nextIndex > index) {
                         this.responses.splice(nextIndex, nextIndex - index);
