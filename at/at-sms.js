@@ -676,7 +676,7 @@ ntAtSms.SMS.prototype.encodeMessage = function(str, options) {
         */
         var smsc = '';
         if (this.smsc) {
-            var smsc = ntAtSms.encodeNumber(this.smsc);
+            smsc = ntAtSms.encodeNumber(this.smsc);
         }
         this.pdu = ntAtSmsUtil.hexPad((smsc.length / 2).toString(16).toUpperCase()) + smsc + pdu;
         return true;

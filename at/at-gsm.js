@@ -174,10 +174,7 @@ ntAtGsm.factory.prototype.doProcess = function(response) {
 }
 
 ntAtGsm.factory.prototype.resolveUnprocessed = function(data) {
-    var result;
-    var resolved;
-    var len;
-    var response;
+    var result, resolved, len, response;
     const unprocessed = Array.isArray(this.unprocessed) ? this.unprocessed : [];
     Array.prototype.push.apply(unprocessed, data.unprocessed);
     for (var i = 0; i < unprocessed.length; i++) {
@@ -273,47 +270,48 @@ ntAtGsm.factory.prototype.processProps = function() {
 
 ntAtGsm.factory.prototype.addQueues = function(queues) {
     if (!this.q) {
-        const next = () => {
+        const next = (success) => {
+            this.debug('%s: Queue %s [%s]', this.name, JSON.stringify(this.queue), success ? 'OK' : 'FAILED');
+            this.queue = null;
             this.q.pending = false;
             this.q.next();
         }
         this.q = new ntAtQueue.queue(queues, (queue) => {
-            this.debug('%s: Processing queue %s', this.name, JSON.stringify(queue));
             this.q.pending = true;
             this.queue = queue;
             switch (queue.op) {
                 case 'read':
                     this.setStorage(queue.storage).then(() => {
                         this.query(this.getCmd(ntAtDrv.AT_CMD_SMS_READ, {SMS_ID: queue.index})).then(() => {
-                            next();
+                            next(true);
                         }).catch(() => {
-                            next();
+                            next(false);
                         });
                     }).catch(() => {
-                        next();
+                        next(false);
                     });
                     break;
                 case 'delete':
                     this.setStorage(queue.storage).then(() => {
                         this.query(this.getCmd(ntAtDrv.AT_CMD_SMS_DELETE, {SMS_ID: queue.index})).then(() => {
-                            next();
+                            next(true);
                         }).catch(() => {
-                            next();
+                            next(false);
                         });
                     }).catch(() => {
-                        next();
+                        next(false);
                     });
                     break;
                 case 'command':
                     this.query(queue.data, queue.options).then(() => {
-                        next();
+                        next(true);
                     }).catch(() => {
-                        next();
+                        next(false);
                     });
                     break;
                 default:
                     this.debug('%s: Unknown operation %s', this.name, queue.op);
-                    next();
+                    next(false);
                     break;
             }
         }, () => {

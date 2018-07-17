@@ -167,7 +167,6 @@ ntAtProcessor.factory.prototype.readPDU = function(data) {
                             storage = this.parent.queue ? this.parent.queue.storage : this.parent.props.storage;
                             storageIndex = this.parent.queue ? this.parent.queue.index : this.parent.props.storageIndex;
                             storageStatus = tokens[0];
-                            if (this.parent.queue) this.parent.queue = null;
                             break;
                         case ntAtDrv.AT_RESPONSE_CMGL:
                             storage = this.parent.props.storage;
