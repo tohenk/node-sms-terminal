@@ -119,20 +119,18 @@ router.post('/:term/at', function(req, res, next) {
     const terminal = term.get(req.params.term);
     if (terminal) {
       terminal.query(req.body.command)
-        .then((res) => {
+        .then((retval) => {
           result.success = true;
-          if (res) {
-            result.notice = util.format('Command return OK [%s]', JSON.stringify(res));
-          } else {
-            result.notice = 'Command return OK';
+          if (retval) {
+            result.data = JSON.stringify(retval);
           }
           res.json(result);
         })
         .catch((err) => {
           if (err instanceof Error) {
-            result.error = err.message;
+            result.data = err.message;
           } else {
-            result.error = err;
+            result.data = err;
           }
           res.json(result);
         })

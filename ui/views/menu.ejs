@@ -32,16 +32,9 @@
 } %>
 <% block('mainmenu', menu(menus, {mainmenu: true, indentation: 2})); %>
 <% script.create('jQuery')
-  .useDependencies(['jQuery/Util', 'jQuery/Notification', 'SemanticUI/Dialog/Message'])
+  .useDependencies(['jQuery/Util', 'SemanticUI/Dialog'])
   .add(`
 $.tasks = {
-    notifyResult: function(result) {
-        if (result.success) {
-            $.ntfy.notify(result.notice ? result.notice : 'Operation successfully submitted!', 'success');
-        } else {
-            $.ntfy.notify(result.error ? result.error : 'Operation failed!', 'error');
-        }
-    },
     about: function() {
         var self = this;
         var f = function() {
@@ -87,11 +80,15 @@ $.tasks = {
                         '<label>Command:</label>' +
                         '<input type="text" name="command" value="">' +
                     '</div>' +
+                    '<div class="field">' +
+                        '<label>Feedback:</label>' +
+                        '<div class="ui segment feedback" style="height: 10rem; overflow-y: auto;"></div>' +
+                    '</div>' +
                 '</form>';
             var dlg = $.ntdlg.dialog('sendatdlg', 'Send AT command', message, 'desktop icon', {
-                'okay': {
+                'send': {
                     type: 'green approve',
-                    caption: '<i class="check icon"></i>Ok',
+                    caption: '<i class="check icon"></i>Send',
                     handler: function() {
                         var term = dlg.find('select[name="terminal"]');
                         var cmd = dlg.find('input[name="command"]');
@@ -104,14 +101,29 @@ $.tasks = {
                             return false;
                         }
                         $.post('/TERM/at'.replace(/TERM/, term.val()), {command: cmd.val()}).then(function(json) {
-                            self.notifyResult(json);
+                            console.log(json);
+                            var responses = [];
+                            responses.push($.util.template('%TERM%&gt; <strong>%CMD%</strong> <i class="%ICON% icon"></i>', {
+                                TERM: term.val(),
+                                CMD: cmd.val(),
+                                ICON: json.success ? 'green check' : 'red times'
+                            }));
+                            if (json.data) {
+                                responses.push($.util.template('<pre>%DATA%</pre>', {
+                                    STATE: json.success ? 'green' : 'red',
+                                    DATA: json.data
+                                }));
+                            }
+                            dlg.find('.feedback').append($.util.template('<p class="small">%CONTENT%</p>', {
+                                CONTENT: responses.join('')
+                            }));
                         });
                         return false;
                     }
                 },
-                'cancel': {
+                'close': {
                     type: 'red deny',
-                    caption: '<i class="times icon"></i>Cancel'
+                    caption: '<i class="times icon"></i>Close'
                 }
             });
             dlg.find('select.dropdown').dropdown();
