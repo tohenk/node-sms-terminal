@@ -349,7 +349,7 @@ AppTerm.applyHandler = function(gsm) {
                     socket.emit('getopt', opts);
                 });
                 socket.on('state', () => {
-                    socket.emit('state', {idle: gsm.idle});
+                    socket.emit('state', {idle: gsm.idle && gsm.queueCount() == 0});
                 });
                 socket.on('hash', (data) => {
                     switch (data.type) {
@@ -409,7 +409,7 @@ AppTerm.applyHandler = function(gsm) {
             });
             // state broadcast
             gsm.on('state', () => {
-                gsm.io.emit('state', {idle: gsm.idle});
+                gsm.io.emit('state', {idle: gsm.idle && gsm.queueCount() == 0});
             });
         }
         if (this.networks.length && gsm.props.network) {

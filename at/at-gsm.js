@@ -331,6 +331,13 @@ ntAtGsm.factory.prototype.checkQueues = function() {
     }
 }
 
+ntAtGsm.factory.prototype.queueCount = function() {
+    if (this.q) {
+        return this.q.queues.length;
+    }
+    return 0;
+}
+
 ntAtGsm.factory.prototype.dispatchMessages = function() {
     while (this.messages.length) {
         var index = 0;
