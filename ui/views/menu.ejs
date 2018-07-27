@@ -127,6 +127,10 @@ $.tasks = {
                 }
             });
             dlg.find('select.dropdown').dropdown();
+            dlg.find('form').on('submit', function(e) {
+                e.preventDefault();
+                dlg.find('.approve').click();
+            });
             $.ntdlg.show(dlg);
         }
     },
