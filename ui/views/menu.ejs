@@ -32,7 +32,7 @@
 } %>
 <% block('mainmenu', menu(menus, {mainmenu: true, indentation: 2})); %>
 <% script.create('jQuery')
-  .useDependencies(['jQuery/Util', 'SemanticUI/Dialog'])
+  .useDependencies(['jQuery/Util', 'SemanticUI/Dialog', 'SemanticUI/Dialog/Message'])
   .add(`
 $.tasks = {
     about: function() {
