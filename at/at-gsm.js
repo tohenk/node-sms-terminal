@@ -55,7 +55,8 @@ ntAtGsm.factory = function(name, stream, config) {
         sendMessageAsFlash: this.getConfig('sendMessageAsFlash', false),
         emptyWhenFull: this.getConfig('emptyWhenFull', false)
     }
-    this.sendTimeout = config.sendTimeout || 10000;
+    this.sendTimeout = config.sendTimeout || 30000; // 30 seconds
+    this.monitorInterval = config.monitorInterval || 600000; // 10 minutes
     this.on('process', (response) => {
         this.doProcess(response);
     });
@@ -136,7 +137,7 @@ ntAtGsm.factory.prototype.attachSignalMonitor = function() {
         const cmd = this.getCmd(ntAtDrv.AT_RESPONSE_RSSI);
         if (!cmd) {
             this.debug('%s: CSQ monitor enabled', this.name);
-            const interval = 5 * 60 * 1000;
+            const interval = this.monitorInterval;
             setInterval(() => {
                 const queues = [{
                     op: 'command',
