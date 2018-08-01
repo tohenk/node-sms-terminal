@@ -578,6 +578,7 @@ AppTerm.setSocketIo = function(io) {
     this.termCon = this.io.of('/ctrl');
     this.termCon.on('connection', (socket) => {
         console.log('Term client connected: %s', socket.id);
+        socket.time = new Date();
         const timeout = setTimeout(() => {
             console.log('Closing connection due to no auth: %s', socket.id);
             socket.disconnect();

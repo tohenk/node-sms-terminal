@@ -3,7 +3,6 @@ const router  = express.Router();
 const fs      = require('fs');
 const path    = require('path');
 const moment  = require('moment');
-const util    = require('util');
 
 function getActivity(req, res, next) {
   const result = {};
@@ -105,7 +104,8 @@ router.get('/client', function(req, res, next) {
     const info = {
       nr: ++nr,
       id: socket.id,
-      address: socket.handshake.address
+      address: socket.handshake.address,
+      time: socket.time ? moment(socket.time).format('DD MMM YYYY HH:mm') : null
     }
     result.push(info);
   });

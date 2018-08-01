@@ -4,6 +4,7 @@
       <th>#</th>
       <th>Id</th>
       <th>Address</th>
+      <th>Time</th>
     </tr>
   </thead>
 </table>
@@ -16,6 +17,7 @@ $.client = $.loader($('div[data-tab="client"] table'), {
         return $('<tr><td>' + item.nr + '</td>' +
             '<td>' + item.id + '</td>' +
             '<td>' + item.address + '</td>' +
+            '<td>' + (item.time ? item.time : 'n/a') + '</td>' +
             '</tr>');
     },
     loaded: function(json) {
