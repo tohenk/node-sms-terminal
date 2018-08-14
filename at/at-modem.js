@@ -134,8 +134,7 @@ ntAtModem.factory.prototype.rx = function(data) {
     if (!this.status.busy) {
         var data = ntUtil.cleanEol(data);
         this.log('RX> %s', data);
-        this.responses.push(data);
-        this.process();
+        this.recv(data);
     }
 }
 
@@ -148,7 +147,7 @@ ntAtModem.factory.prototype.tx = function(data, options) {
             const params = {};
             if (options.expect) params.expect = options.expect;
             if (options.ignore) params.ignore = options.ignore;
-            const txd = new ntAtModem.txdata(this, data, params);
+            const txd = new ntAtModem.txdata(this, params);
             const t = () => {
                 this.setState({busy: false});
                 this.timedout++;
@@ -169,6 +168,9 @@ ntAtModem.factory.prototype.tx = function(data, options) {
                     }
                     if (txd.error) {
                         reject(txd);
+                    }
+                    if (txd.extras) {
+                        this.recv(txd.extras);
                     }
                 } else {
                     timeout = setTimeout(t, options.timeout || this.timeout);
@@ -204,12 +206,17 @@ ntAtModem.factory.prototype.txqueue = function(queues) {
                 q.next();
             }).catch(() => {
                 q.next();
-            })
+            });
         });
         q.once('done', () => {
             resolve(q.responses);
         });
     });
+}
+
+ntAtModem.factory.prototype.recv = function(data) {
+    this.responses.push(data);
+    this.process();
 }
 
 ntAtModem.factory.prototype.process = function() {
@@ -277,61 +284,139 @@ util.inherits(ntAtModem.factory, EventEmitter);
 
 // txdata
 
-ntAtModem.txdata = function(parent, data, options) {
+ntAtModem.txdata = function(parent, options) {
     options = options || {};
     this.parent = parent;
-    this.data = data;
     this.expect = options.expect || null;
     this.ignore = options.ignore || null;
     this.okay = false;
     this.error = false;
     this.timeout = false;
     this.responses = [];
+    this.extras = null;
 }
 
 ntAtModem.txdata.prototype.check = function(response) {
-    var responses = response.split(this.parent.getCmd(ntAtDrv.AT_PARAM_TERMINATOR));
-    for (var i = 0; i < responses.length; i++) {
-        var s = responses[i];
-        if (s.length) {
-            if (this.isExpected(s) || this.isOkay(s) || this.isError(s)) {
+    var result = false;
+    this.extras = null;
+    this.excludeMatch = true;
+    var responses = this.clean(response.split(this.parent.getCmd(ntAtDrv.AT_PARAM_TERMINATOR)));
+    if (!result && this.isExpected(responses)) {
+        result = true;
+    }
+    if (!result && this.isOkay(responses)) {
+        result = true;
+    }
+    if (!result && this.isError(responses)) {
+        result = true;
+    }
+    this.collect(responses);
+    return result;
+}
+
+ntAtModem.txdata.prototype.clean = function(responses) {
+    var index = responses.length;
+    while (index >= 0) {
+        index--;
+        if ('' == responses[index]) responses.splice(index, 1);
+    }
+    return responses;
+}
+
+ntAtModem.txdata.prototype.collect = function(responses) {
+    var i = 0, j = responses.length;
+    while (true) {
+        if (i >= j) break;
+        var s = responses.shift();
+        if (i == this.match.pos) {
+            if (this.excludeMatch) break;
+        }
+        if (!this.isIgnored(s)) this.responses.push(s);
+        if (i == this.match.pos) break;
+        i++;
+    }
+    if (responses.length) {
+        this.extras = responses.join(this.parent.getCmd(ntAtDrv.AT_PARAM_TERMINATOR));
+    }
+}
+
+ntAtModem.txdata.prototype.getMatch = function(responses, matches, raw) {
+    this.match = {};
+    raw = typeof raw !== 'undefined' ? raw : false;
+    var pos = 0;
+    while (true) {
+        if (pos >= responses.length) break;
+        for (var i = 0; i < matches.length; i++) {
+            var expected = raw ? matches[i] : this.parent.getCmd(matches[i]);
+            if (expected == undefined) continue;
+            if (this.tryMatch(responses, pos, expected)) {
+                this.match.pos = pos;
+                this.match.matched = matches[i];
                 return true;
             }
-            if (!this.isIgnored(s)) this.responses.push(s);
+        }
+        pos++;
+    }
+    return false;
+}
+
+ntAtModem.txdata.prototype.tryMatch = function(responses, pos, expected) {
+    if (pos < responses.length) {
+        var s = responses[pos];
+        // check for whole match
+        if (this.matchRaw(expected, s)) {
+            return true;
+        }
+        // check for multiline match
+        if (0 === expected.indexOf(s) && ((pos + 1) < responses.length)) {
+            var i = pos + 1;
+            var matched = false;
+            while (true) {
+                if (i >= responses.length) break;
+                s += responses[i];
+                if (this.matchRaw(expected, s)) {
+                    matched = true;
+                    break;
+                }
+                i++;
+            }
+            if (matched) {
+                // combine matched response
+                responses[pos] = s;
+                responses.splice(pos + 1, i - pos);
+                return true;
+            }
         }
     }
     return false;
 }
 
-ntAtModem.txdata.prototype.isOkay = function(response) {
-    var commands = [ntAtDrv.AT_RESPONSE_OK];
-    for (var i = 0; i < commands.length; i++) {
-        if (this.match(commands[i], response)) {
-            this.okay = true;
-            break;
-        }
+ntAtModem.txdata.prototype.isOkay = function(responses) {
+    const commands = [ntAtDrv.AT_RESPONSE_OK];
+    if (this.getMatch(responses, commands)) {
+        this.okay = true;
     }
     return this.okay;
 }
 
-ntAtModem.txdata.prototype.isError = function(response) {
-    var commands = [ntAtDrv.AT_RESPONSE_ERROR, ntAtDrv.AT_RESPONSE_NO_CARRIER,
+ntAtModem.txdata.prototype.isError = function(responses) {
+    const commands = [ntAtDrv.AT_RESPONSE_ERROR, ntAtDrv.AT_RESPONSE_NO_CARRIER,
         ntAtDrv.AT_RESPONSE_NOT_SUPPORTED, ntAtDrv.AT_RESPONSE_CME_ERROR, ntAtDrv.AT_RESPONSE_CMS_ERROR];
-    for (var i = 0; i < commands.length; i++) {
-        if (this.match(commands[i], response)) {
-            if (commands[i] == ntAtDrv.AT_RESPONSE_CME_ERROR || commands[i] == ntAtDrv.AT_RESPONSE_CMS_ERROR) {
-                this.responses.push(response);
-            }
-            this.error = true;
-            break;
+    if (this.getMatch(responses, commands)) {
+        if ([ntAtDrv.AT_RESPONSE_CME_ERROR, ntAtDrv.AT_RESPONSE_CMS_ERROR].indexOf(this.match.matched) >= 0) {
+            this.excludeMatch = false;
         }
+        this.error = true;
     }
     return this.error;
 }
 
-ntAtModem.txdata.prototype.isExpected = function(response) {
-    if (this.isMatch(this.expect, response)) {
-        this.okay = true;
+ntAtModem.txdata.prototype.isExpected = function(responses) {
+    if (this.expect) {
+        const commands = Array.isArray(this.expect) ? this.expect : [this.expect];
+        if (this.getMatch(responses, commands)) {
+            this.okay = true;
+        }
     }
     return this.okay;
 }
