@@ -21,7 +21,6 @@
   <%- include('term') %>
 </div>
 <% } -%>
-<%- include('menu') %>
 <% script.create('jQuery')
   .useDependencies(['SocketIO'])
   .add(`
@@ -63,6 +62,5 @@ $('.menu .item').tab();
 $.activity.load();
 $.log.load();
 $.client.load();
-$.tasks.init();
 $.uiCon.init();
 `); %>

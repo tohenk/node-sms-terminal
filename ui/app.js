@@ -62,4 +62,11 @@ const script = require('./lib/script');
 script.addDefault('SemanticUI');
 script.addAsset(script.Asset.STYLESHEET, 'app.css');
 
+// relative from layout
+app.slots = {
+  mainmenu: {
+    view: '../slot/mainmenu'
+  }
+};
+
 module.exports = app;

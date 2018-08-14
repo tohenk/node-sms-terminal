@@ -16,21 +16,23 @@
     }
 } %>
 <% if(user.authenticated) {
-    menus.tasks.items.divider1 = {
-        type: 'divider'
-    }
-    menus.tasks.items.sendat = {
-        title: 'Send AT command'
-    }
-    menus.tasks.items.divider2 = {
-        type: 'divider'
-    }
-    menus.tasks.items.logout = {
-        title: 'Logout',
-        url: '/logout'
-    }
+    Object.assign(menus.tasks.items, {
+        divider1: {
+            type: 'divider'
+        },
+        sendat: {
+            title: 'Send AT command'
+        },
+        divider2: {
+            type: 'divider'
+        },
+        logout: {
+            title: 'Logout',
+            url: '/logout'
+        }
+    });
 } %>
-<% block('mainmenu', menu(menus, {mainmenu: true, indentation: 2})); %>
+<%- menu(menus, {mainmenu: true, indentation: 2}); %>
 <% script.create('jQuery')
   .useDependencies(['jQuery/Util', 'SemanticUI/Dialog', 'SemanticUI/Dialog/Message'])
   .add(`
@@ -146,4 +148,5 @@ $.tasks = {
         });
     }
 }
+$.tasks.init();
 `); %>

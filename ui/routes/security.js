@@ -8,7 +8,8 @@ router.get('/login', function(req, res, next) {
   } else if (req.query.r) {
     redir = req.query.r;
   }
-  res.render('login', {redirect: redir ? redir : '/'});
+  res.app.slots.mainmenu.enabled = false;
+  res.render('security/login', {redirect: redir ? redir : '/'});
 });
 
 router.post('/login', function(req, res, next) {
