@@ -49,14 +49,14 @@ function Security(options) {
 }
 
 function applySecurity(req, res) {
-    if (req.user) return;
+    const app = req.app;
     if (!req.session.user) {
         req.session.user = {};
     }
-    req.user = {
+    app.user = {
         authenticate: (username, password) => {
-            if (typeof req.app.authenticate == 'function') {
-                return req.app.authenticate(username, password);
+            if (typeof app.authenticate == 'function') {
+                return app.authenticate(username, password);
             }
             throw new Error('Application authenticate is not set');
         },
@@ -70,8 +70,8 @@ function applySecurity(req, res) {
             req.session.user.authenticated = false;
         }
     }
-    res.user = req.user;
-    res.locals.user = req.session.user;
+    res.user = req.user = app.user;
+    app.locals.user = req.session.user;
 }
 
 module.exports = Security;

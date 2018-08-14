@@ -34,8 +34,9 @@ function MenuHelper(options) {
 }
 
 function attachHelper(res) {
-    if (!res.locals.mainmenu) {
-        res.locals.menu = (items, options) => {
+    const app = res.app;
+    if (!app.locals.menu) {
+        app.locals.menu = (items, options) => {
             return buildMenu(items, options);
         }
     }

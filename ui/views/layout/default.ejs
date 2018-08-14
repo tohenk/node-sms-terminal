@@ -5,12 +5,12 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title><%- sitetitle %></title>
-<% stylesheets.forEach((css) => { -%>
+<% stylesheets().forEach((css) => { -%>
 <link rel="stylesheet" href="<%- css %>" />
 <% }) -%>
 </head>
 <body>
-  <%_ if((mainmenu = block('mainmenu')).length) { -%>
+  <%_ if((mainmenu = slot('mainmenu')) && (mainmenu = include(mainmenu))) { -%>
   <div class="ui fixed inverted menu">
     <%- mainmenu %>
   </div>
@@ -19,13 +19,16 @@
   <% if(title.length) { %><h1 class="ui dividing header"><%= title %></h1><% } %>
   <%- content %>
   </div>
-  <%_ javascripts.forEach((js) => { -%>
+  <%_ if((addons = slot('addons')) && (addons = include(addons))) { -%>
+  <%- addons %>
+  <%_ } -%>
+  <%_ javascripts().forEach((js) => { -%>
   <script type="text/javascript" src="<%- js %>"></script>
   <%_ }) -%>
-  <%_ if(scripts.length) { -%>
+  <%_ if((scriptContent = scripts()).length) { -%>
   <script type="text/javascript">
     //<![CDATA[
-    <%- scripts %>
+    <%- scriptContent %>
     //]]>
   </script>
   <%_ } -%>
