@@ -66,6 +66,9 @@ script.addAsset(script.Asset.STYLESHEET, 'app.css');
 app.slots = {
   mainmenu: {
     view: '../slot/mainmenu'
+  },
+  addons: {
+    view: '../slot/addons'
   }
 };
 
