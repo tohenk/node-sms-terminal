@@ -300,7 +300,10 @@ ntAtModem.txdata.prototype.check = function(response) {
     var result = false;
     this.extras = null;
     this.excludeMatch = true;
-    var responses = this.clean(response.split(this.parent.getCmd(ntAtDrv.AT_PARAM_TERMINATOR)));
+    const responses = [];
+    Array.prototype.push.apply(responses, this.responses);
+    Array.prototype.push.apply(responses,
+        this.clean(response.split(this.parent.getCmd(ntAtDrv.AT_PARAM_TERMINATOR))));
     if (!result && this.isExpected(responses)) {
         result = true;
     }
@@ -324,6 +327,7 @@ ntAtModem.txdata.prototype.clean = function(responses) {
 }
 
 ntAtModem.txdata.prototype.collect = function(responses) {
+    this.responses = [];
     var i = 0, j = responses.length;
     while (true) {
         if (i >= j) break;
