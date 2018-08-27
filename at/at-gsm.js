@@ -340,20 +340,21 @@ ntAtGsm.factory.prototype.queueCount = function() {
 }
 
 ntAtGsm.factory.prototype.dispatchMessages = function() {
+    var index = 0;
     while (this.messages.length) {
-        var index = 0;
+        var nextIndex = null;
         var report = false;
         var msg = this.messages[index].message;
         if (msg instanceof ntAtSms.StatusReport) {
             report = true;
-            index = this.processReport(index, msg);
+            nextIndex = this.processReport(index, msg);
         }
         if (msg instanceof ntAtSms.SMS) {
-            index = this.processSMS(index, msg);
+            nextIndex = this.processSMS(index, msg);
         }
-        if (index != null) {
-            const indexes = Array.isArray(index) ? index : [index];
-            const queues = [];
+        if (nextIndex != null) {
+            var indexes = Array.isArray(nextIndex) ? nextIndex : [nextIndex];
+            var queues = [];
             if (report || this.options.deleteMessageOnRead) {
                 for (var i = 0; i < indexes.length; i++) {
                     index = indexes[i];
@@ -371,6 +372,9 @@ ntAtGsm.factory.prototype.dispatchMessages = function() {
                 this.propChanged({queues: queues});
             }
         } else {
+            index++;
+        }
+        if (index >= this.messages.length) {
             break;
         }
     }
@@ -397,7 +401,7 @@ ntAtGsm.factory.prototype.processSMS = function(pos, msg) {
                 var nmsg = this.messages[i].message;
                 if (!(nmsg instanceof ntAtSms.SMS)) continue;
                 // record non long messages in case the messages parts is still missing
-                if (!nextPos && nmsg.getReference() == null) {
+                if (nextPos == null && nmsg.getReference() == null) {
                     nextPos = i;
                 }
                 if (nmsg.getReference() == ref) {
@@ -433,7 +437,7 @@ ntAtGsm.factory.prototype.processSMS = function(pos, msg) {
         } else {
             // if long messages parts was still missing then process non long one
             this.debug('%s: Waiting for other messages part from %s, found %d/%d', this.name, msg.address, count, total);
-            if (nextPos) {
+            if (nextPos != null) {
                 var msg = this.messages[nextPos].message;
                 var pos = nextPos;
                 processed = true;
