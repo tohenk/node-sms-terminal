@@ -45,6 +45,7 @@ if (!Cmd.parse() || (Cmd.get('help') && usage())) {
 const crypto        = require('crypto');
 const fs            = require('fs');
 const ntUtil        = require('./lib/util');
+const ntLogger      = require('./lib/logger');
 const AppTerm       = require('./term');
 
 const database = {
@@ -99,13 +100,9 @@ if (!config.security.password) {
     console.log('Web interface password generated: %s', config.security.password);
 }
 if (!config.database.logging) {
-    const dblogger = new console.Console(fs.createWriteStream(path.join(config.logdir, 'db.log')));
+    const dblogger = new ntLogger(path.join(config.logdir, 'db.log'));
     config.database.logging = function() {
-        const args = Array.from(arguments);
-        if (args.length) {
-            args[0] = ntUtil.formatDate(new Date(), 'dd-MM HH:mm:ss.zzz') + ' ' + args[0];
-        }
-        dblogger.log.apply(null, args);
+        dblogger.log.apply(dblogger, Array.from(arguments));
     }
 }
 config.logUssd = Cmd.get('log-ussd') ? true : false;

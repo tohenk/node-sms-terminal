@@ -35,6 +35,7 @@ const util          = require('util');
 const ntAtDrv       = require('./at-driver');
 const ntAtQueue     = require('./at-queue');
 const ntUtil        = require('./../lib/util');
+const ntLogger      = require('./../lib/logger');
 
 // factory
 
@@ -45,8 +46,7 @@ ntAtModem.factory = function(name, stream, config) {
     this.logdir = this.getConfig('logdir',
         fs.realpathSync(path.join(__dirname, '..', 'logs')));
     this.logfile = path.join(this.logdir, this.name + '.log');
-    this.stdout = new fs.createWriteStream(this.logfile);
-    this.logger = new console.Console(this.stdout);
+    this.logger = new ntLogger(this.logfile);
     this.responses = [];
     this.stream = stream;
     this.stream.on('data', (data) => {
@@ -262,13 +262,11 @@ ntAtModem.factory.prototype.getResult = function(cmds, res, status) {
 }
 
 ntAtModem.factory.prototype.log = function() {
-    var args = Array.from(arguments);
-    if (args.length) {
-        args[0] = ntUtil.formatDate(new Date(), 'dd-MM HH:mm:ss.zzz') + ' ' + args[0];
-    }
-    this.logger.log.apply(null, args);
-    const message = util.format.apply(null, args);
-    this.emit('log', message);
+    this.logger.log.apply(this.logger, Array.from(arguments))
+        .then((message) => {
+            this.emit('log', message);
+        })
+    ;
 }
 
 ntAtModem.factory.prototype.debug = function() {
