@@ -34,7 +34,6 @@ const csv           = require('fast-csv');
 const ini           = require('ini');
 const util          = require('util');
 const SerialPort    = require('serialport');
-const ntUtil        = require('./lib/util');
 const ntLogger      = require('./lib/logger');
 const AtPool        = require('./at/at-pool');
 const AtConst       = require('./at/at-const');
