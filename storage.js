@@ -200,7 +200,7 @@ AppStorage.getPendingActivities = function() {
     return this.Activity.findAll({
         where: {
             status: 0,
-            type: {[this.db.Op.in]: [this.ACTIVITY_RING, this.ACTIVITY_INBOX, this.ACTIVITY_CUSD]}
+            type: {[Sequelize.Op.in]: [this.ACTIVITY_RING, this.ACTIVITY_INBOX, this.ACTIVITY_CUSD]}
         },
         order: [['time', 'ASC']]
     });
@@ -215,7 +215,7 @@ AppStorage.getReports = function(since) {
     }
     return this.PduReport.findAll({
         where: {
-            time: {[this.db.Op.gte]: since}
+            time: {[Sequelize.Op.gte]: since}
         }
     });
 }
