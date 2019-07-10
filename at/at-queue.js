@@ -116,7 +116,7 @@ ntAtQueue.works = function(workers) {
                     reject(err);
                 });
             } catch(e) {
-                console.log('Error: %s', e.message);
+                console.log(e.message);
                 reject(e.message);
             }
         }

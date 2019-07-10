@@ -572,18 +572,18 @@ ntAtGsm.factory.prototype.query = function(cmd, options) {
                     resolve();
                 }
             }).catch((err) => {
+                var msg = err;
                 if (err instanceof ntAtModem.txdata) {
                     if (err.timeout) {
-                        reject(new Error(util.format('%s: Operation timeout', err.data)));
+                        msg = util.format('%s: Operation timeout', err.data);
                     }
                     if (err.error && err.hasResponse()) {
-                        reject(new Error(util.format('%s: %s', err.data, err.res())));
+                        msg = util.format('%s: %s', err.data, err.res());
                     } else {
-                        reject(new Error(util.format('%s: Operation failed', err.data)));
+                        msg = util.format('%s: Operation failed', err.data);
                     }
-                } else {
-                    reject(err);
                 }
+                reject(new Error(util.format('%s: %s', this.name, msg)));
             });
         }
     });

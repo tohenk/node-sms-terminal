@@ -125,7 +125,7 @@ function run() {
     AppTerm.Pool.Driver.names().forEach((drv) => {
         console.log('- %s', AppTerm.Pool.Driver.get(drv).desc);
     });
-    console.log('\r');
+    console.log('\n');
     if (ports.length) {
         const port = Cmd.get('port') | 8000;
         const app = require('./ui/app');

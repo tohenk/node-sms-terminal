@@ -148,6 +148,8 @@ ntAtModem.factory.prototype.tx = function(data, options) {
             if (options.expect) params.expect = options.expect;
             if (options.ignore) params.ignore = options.ignore;
             const txd = new ntAtModem.txdata(this, params);
+            // set data for error handler
+            txd.data = data;
             const t = () => {
                 this.setState({busy: false});
                 this.timedout++;
