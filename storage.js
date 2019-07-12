@@ -91,9 +91,10 @@ AppStorage.saveActivity = function(origin, activity, done) {
 
 AppStorage.savePdu = function(origin, msg, done) {
     const dir = msg.isSubmit ? this.DIR_OUT : this.DIR_IN;
+    const mr = typeof msg.messageReference != 'undefined' ? msg.messageReference : null;
     const conditions = {imsi: origin, pdu: msg.pdu, dir: dir};
     if (dir == this.DIR_OUT) {
-        conditions.mr = msg.messageReference;
+        conditions.mr = mr;
     }
     this.Pdu.count({where: conditions}).then((count) => {
         if (count == 0) {
@@ -103,7 +104,7 @@ AppStorage.savePdu = function(origin, msg, done) {
                 dir: dir,
                 address: msg.address,
                 pdu: msg.pdu,
-                mr: typeof msg.messageReference != 'undefined' ? msg.messageReference : null,
+                mr: mr,
                 time: new Date()
             }).then((pdu) => {
                 if (typeof done == 'function') {
