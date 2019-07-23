@@ -134,16 +134,26 @@ ntAtSms.reverseOctets = function(octets) {
 }
 
 ntAtSms.decodeNumber = function(raw) {
-    var addrType = parseInt('0x' + raw.substr(0, 2));
-    if ((addrType & 0x50) == 0x50) {
-        return ntAtSmsUtil.gsmDecode7Bit(raw.substr(2));
-    }
-    var number = this.reverseOctets(raw.substr(2));
-    if (number.length && number.substr(-1).toUpperCase() == 'F') {
-        number = number.substr(0,  number.length - 1);
-    }
-    if (number.length && ((addrType & 0x70) >> 4) == 1) {
-        number = '+' + number;
+    const addrType = parseInt('0x' + raw.substr(0, 2));
+    const ton = (addrType & 0x70) >> 4;   // type of number
+    const npi = (addrType & 0x0F);        // numbering plan identification
+    var number = raw.substr(2);
+    // alpha numeric
+    if (npi == 0 && ton == 5) {
+        number = ntAtSmsUtil.gsmDecode7Bit(number);
+    } else {
+        number = this.reverseOctets(number);
+        if (number.length && number.substr(-1).toUpperCase() == 'F') {
+            number = number.substr(0,  number.length - 1);
+        }
+        switch (ton) {
+            case 1: // international number
+            case 2: // national number
+                if (number.charAt(0) != '+') {
+                    number = '+' + number;
+                }
+                break;
+        }
     }
     return number;
 }
