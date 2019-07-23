@@ -289,7 +289,7 @@ AppTerm.applyHandler = function(gsm) {
                 AppStorage.saveActivity(gsm.info.imsi, {
                     hash: gsm.getHash(gsm.ussdCode, ussd.message),
                     type: AppStorage.ACTIVITY_CUSD,
-                    address: gsm.ussdCode,
+                    address: gsm.ussdCode ? gsm.ussdCode : null,
                     data: ussd.message,
                     status: this.clients.length ? 1 : 0
                 }, done);
