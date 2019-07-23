@@ -323,16 +323,36 @@ ntAtProcessor.factory.prototype.handleCDSI = function(data) {
 }
 
 ntAtProcessor.factory.prototype.handleCPMS = function(data) {
-    // +CPMS: "SM",6,40,"SM",6,40,"SM",6,40
+    // +CPMS: "SM",6,40,"SR",6,40,"SM",6,40
+    // +CPMS: 6,40,6,40,6,40
+    // +CPMS: (("SM", "SR"),"SM")
     const result = {};
-    if (isNaN(data.tokens[0])) {
-        result.storage = data.tokens.shift();
+    const storages = {};
+    while (true) {
+        // response must be at least 3 part
+        if (data.tokens.length < 3) break;
+        // ensure storage is not number
+        if (!isNaN(data.tokens[0])) break;
+        var info = {};
+        info.storage = data.tokens.shift();
+        // used storage
+        var value = data.tokens.shift();
+        if (!isNaN(value)) info.used = parseInt(value);
+        // total storage
+        var value = data.tokens.shift();
+        if (!isNaN(value)) info.total = parseInt(value);
+        // add unique storage information
+        if (!storages[info.storage] && info.used != undefined && info.total != undefined) {
+            storages[info.storage] = info;
+        }
     }
-    if (data.tokens.length >= 2) {
-        var value = data.tokens.shift();
-        if (!isNaN(value)) result.storageUsed = value;
-        var value = data.tokens.shift();
-        if (!isNaN(value)) result.storageTotal = value;
+    const keys = Object.keys(storages);
+    if (keys.length) {
+        const storage = keys[0];
+        result.storage = storages[storage].storage;
+        result.storageUsed = storages[storage].used;
+        result.storageTotal = storages[storage].total;
+        result.storages = storages;
     }
     return result;
 }

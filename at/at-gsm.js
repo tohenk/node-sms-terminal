@@ -65,11 +65,23 @@ ntAtGsm.factory = function(name, stream, config) {
     });
     this.on('state', () => {
         if (this.idle) {
-            if (this.memfull && this.options.emptyWhenFull) {
-                this.debug('!! %s: Emptying full storage %s', this.name, this.memfull);
-                this.emptyStorage(this.memfull).then(() => {
-                    this.memfull = null;
-                });
+            if (this.memfull && !this.memfullProcessing) {
+                this.memfullProcessing = true;
+                try {
+                    if (this.options.emptyWhenFull) {
+                        this.debug('!! %s: Emptying full storage %s', this.name, this.memfull);
+                        this.emptyStorage(this.memfull).then(() => {
+                            this.memfull = null;
+                        });
+                    } else {
+                        this.debug('!! %s: ATTENTION, storage %s is full', this.name, this.memfull);
+                        this.memfull = null;
+                    }
+                }
+                catch (e) {
+                    console.log(e);
+                }
+                this.memfullProcessing = false;
             } else {
                 this.checkQueues();
             }
@@ -88,7 +100,8 @@ ntAtGsm.factory.prototype.initialize = function() {
         () => this.applyDefaultStorage(),
         () => this.getSMSC(),
         () => this.getNetwork(),
-        () => this.attachSignalMonitor()
+        () => this.attachSignalMonitor(),
+        () => this.attachMemfullMonitor()
     ]);
 }
 
@@ -132,23 +145,39 @@ ntAtGsm.factory.prototype.doQueryInfo = function() {
     });
 }
 
-ntAtGsm.factory.prototype.attachSignalMonitor = function() {
+ntAtGsm.factory.prototype.attachMonitor = function(title, command, handler, interval) {
     return new Promise((resolve, reject) => {
-        const cmd = this.getCmd(ntAtDrv.AT_RESPONSE_RSSI);
+        const cmd = this.getCmd(command);
         if (!cmd) {
-            this.debug('%s: CSQ monitor enabled', this.name);
-            const interval = this.monitorInterval;
-            setInterval(() => {
-                const queues = [{
-                    op: 'command',
-                    data: this.getCmd(ntAtDrv.AT_CMD_CSQ)
-                }];
-                this.propChanged({queues: queues});
-            }, interval);
+            this.debug('%s: %s monitor enabled', this.name, title);
+            const ms = interval || this.monitorInterval;
+            setInterval(handler, ms);
         } else {
-            this.debug('%s: CSQ monitor not enabled', this.name);
+            this.debug('%s: %s monitor not enabled', this.name, title);
         }
         resolve();
+    });
+}
+
+ntAtGsm.factory.prototype.attachSignalMonitor = function() {
+    return this.attachMonitor('CSQ', ntAtDrv.AT_RESPONSE_RSSI, () => {
+        const queues = [{
+            op: 'command',
+            data: this.getCmd(ntAtDrv.AT_CMD_CSQ)
+        }];
+        this.propChanged({queues: queues});
+    });
+}
+
+ntAtGsm.factory.prototype.attachMemfullMonitor = function() {
+    return this.attachMonitor('MEMFULL', ntAtDrv.AT_RESPONSE_MEM_FULL, () => {
+        if (!this.memfullProcessing) {
+            const queues = [{
+                op: 'command',
+                data: this.getCmd(ntAtDrv.AT_CMD_SMS_STORAGE_GET)
+            }];
+            this.propChanged({queues: queues});
+        }
     });
 }
 
@@ -259,6 +288,17 @@ ntAtGsm.factory.prototype.processProps = function() {
             if (this.ringCount > 0) this.emit('ring', this.caller);
         }
         delete this.props.caller;
+    }
+    if (this.props.storages && !this.props.memfull) {
+        Object.keys(this.props.storages).every((storage) => {
+            if (this.props.storages[storage].used == this.props.storages[storage].total) {
+                this.props.memfull = storage;
+                return false;
+            } else {
+                return true;
+            }
+        });
+        delete this.props.storages;
     }
     if (this.props.memfull) {
         if (this.memfull != this.props.memfull) {
@@ -761,7 +801,8 @@ ntAtGsm.factory.prototype.emptyStorage = function(storage) {
         this.getStorage(storage).then(() => {
             if (this.props.storage == storage && this.props.storageTotal) {
                 const queues = [];
-                for (var i = 0; i < this.props.storageTotal; i++) {
+                // 1 based storage index
+                for (var i = 1; i <= this.props.storageTotal; i++) {
                     queues.push({
                         op: 'delete',
                         storage: storage,
