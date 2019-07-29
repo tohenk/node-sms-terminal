@@ -139,7 +139,7 @@ ntAtSms.decodeNumber = function(raw) {
     const npi = (addrType & 0x0F);        // numbering plan identification
     var number = raw.substr(2);
     // alpha numeric
-    if (npi == 0 && ton == 5) {
+    if (ton == 5) {
         number = ntAtSmsUtil.gsmDecode7Bit(number);
     } else {
         number = this.reverseOctets(number);
