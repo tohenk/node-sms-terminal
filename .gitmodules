@@ -3,4 +3,4 @@
 	url = https://github.com/tohenk/node-ntjs.git
 [submodule "ui/public/js"]
 	path = ui/public/js
-	url = https://github.com/tohenk/node-ntjs-assets.git
+	url = https://github.com/tohenk/ntjs-web-assets.git
