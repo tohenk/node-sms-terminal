@@ -81,6 +81,7 @@ ntAtModem.factory.prototype.detect = function() {
         this.tx('AT', {timeout: 1000}).then(() => {
             this.tx(this.getCmd(ntAtDrv.AT_CMD_Q_FRIENDLY_NAME)).then((result) => {
                 var driver = ntAtDrv.match(result.res());
+                driver = driver.length ? driver : this.driver.name;
                 if (driver.length) {
                     this.detected = true;
                     this.useDriver(driver);
