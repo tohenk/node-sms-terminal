@@ -71,7 +71,7 @@
   </div>
 </div>
 <% items = JSON.stringify(ports, null, 4) %>
-<% script.create('jQuery')
+<% script.create('JQuery')
   .add(`
 $.term.init(${items});
 $('a[data-port]').on('click', function(e) {

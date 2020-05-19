@@ -57,9 +57,9 @@ app.use(function(err, req, res, next) {
   res.render('error/error');
 });
 
-const script = require('./lib/script');
-script.addDefault('SemanticUI');
-script.addAsset(script.Asset.STYLESHEET, 'app.css');
+const { ScriptManager, ScriptAsset } = require('./lib/script');
+ScriptManager.addDefault('SemanticUI');
+ScriptManager.addAsset(ScriptAsset.STYLESHEET, 'app.css');
 
 // relative from layout
 app.slots = {
