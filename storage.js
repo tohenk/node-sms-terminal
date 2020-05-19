@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2018 Toha <tohenk@yahoo.com>
+ * Copyright (c) 2018-2020 Toha <tohenk@yahoo.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,201 +22,204 @@
  * SOFTWARE.
  */
 
-/*
- * App storage.
- */
-
-const AppStorage    = module.exports = exports;
-
 const path          = require('path');
 const Sequelize     = require('sequelize');
-const ntAtSMS       = require('./at/at-sms');
-const AppQueue      = require('./queue');
+const { ntAtSms }   = require('./at/at-sms');
+const ntQueue       = require('./lib/queue');
 
-AppStorage.DIR_OUT = 0;
-AppStorage.DIR_IN = 1;
+/**
+ * App storage.
+ */
+class AppStorage {
 
-AppStorage.ACTIVITY_CALL = 1;
-AppStorage.ACTIVITY_RING = 2;
-AppStorage.ACTIVITY_SMS = 3;
-AppStorage.ACTIVITY_INBOX = 4;
-AppStorage.ACTIVITY_USSD = 5;
-AppStorage.ACTIVITY_CUSD = 6;
+    DIR_OUT = 0
+    DIR_IN = 1
 
-AppStorage.init = function(options) {
-    return new Promise((resolve, reject) => {
-        this.db = new Sequelize(options);
-        this.Activity = this.import('Activity');
-        this.Pdu = this.import('Pdu');
-        this.PduReport = this.import('PduReport');
-        this.db.authenticate().then(() => {
-            resolve();
-        }).catch((err) => {
-            reject(err);
+    ACTIVITY_CALL = 1
+    ACTIVITY_RING = 2
+    ACTIVITY_SMS = 3
+    ACTIVITY_INBOX = 4
+    ACTIVITY_USSD = 5
+    ACTIVITY_CUSD = 6
+
+    init(options) {
+        return new Promise((resolve, reject) => {
+            this.db = new Sequelize(options);
+            this.Activity = this.import('Activity');
+            this.Pdu = this.import('Pdu');
+            this.PduReport = this.import('PduReport');
+            this.db.authenticate().then(() => {
+                resolve();
+            }).catch((err) => {
+                reject(err);
+            });
         });
-    });
-}
-
-AppStorage.import = function(model) {
-    return this.db.import(path.join(__dirname, 'model', model));
-}
-
-AppStorage.saveActivity = function(origin, activity, done) {
-    const condition = {
-        imsi: origin,
-        hash: activity.hash,
-        type: activity.type,
-        address: activity.address
     }
-    this.Activity.count({where: condition}).then((count) => {
-        if (0 == count) {
-            if (!activity.imsi) activity.imsi = origin;
-            if (!activity.status) activity.status = 0;
-            if (!activity.time) activity.time = new Date();
-            if (typeof activity.data == 'string' && activity.data.length == 0) activity.data = null;
-            this.Activity.create(activity).then((result) => {
-                if (typeof done == 'function') {
-                    done(result);
-                }
-            });
-        } else {
-            this.Activity.findOne({where: condition}).then((result) => {
-                if (typeof activity.status != 'undefined' && result.status != activity.status) {
-                    result.update({status: activity.status});
-                }
-            });
-        }
-    });
-}
 
-AppStorage.savePdu = function(origin, msg, done) {
-    const dir = msg.isSubmit ? this.DIR_OUT : this.DIR_IN;
-    const mr = typeof msg.messageReference != 'undefined' ? msg.messageReference : null;
-    const conditions = {imsi: origin, pdu: msg.pdu, dir: dir};
-    if (dir == this.DIR_OUT) {
-        conditions.mr = mr;
+    import(model) {
+        return this.db.import(path.join(__dirname, 'model', model));
     }
-    this.Pdu.count({where: conditions}).then((count) => {
-        if (count == 0) {
-            this.Pdu.create({
-                hash: msg.hash,
-                imsi: origin,
-                dir: dir,
-                address: msg.address,
-                pdu: msg.pdu,
-                mr: mr,
-                time: new Date()
-            }).then((pdu) => {
-                if (typeof done == 'function') {
-                    done(pdu);
-                }
-            });
-        }
-    });
-}
 
-AppStorage.saveReport = function(origin, msg, done) {
-    this.PduReport.count({where: {imsi: origin, pdu: msg.pdu}}).then((count) => {
-        if (count == 0) {
-            return this.PduReport.create({
-                imsi: origin,
-                pdu: msg.pdu,
-                time: new Date()
-            });
+    saveActivity(origin, activity, done) {
+        const condition = {
+            imsi: origin,
+            hash: activity.hash,
+            type: activity.type,
+            address: activity.address
         }
-        return true;
-    }).then(() => {
-        this.updateReport(origin, msg, true, done);
-    });
-}
-
-AppStorage.updateReport = function(origin, report, update, done) {
-    if (report instanceof this.PduReport) {
-        var msg = ntAtSMS.decode(report.pdu);
-    } else {
-        var msg = report;
-    }
-    this.Pdu.findAll({
-        where: {imsi: origin, address: msg.address, dir: this.DIR_OUT, mr: msg.messageReference},
-        order: [['time', 'DESC']]
-    }).then((results) => {
-        const status = {
-            code: msg.status,
-            sent: msg.sentTime,
-            received: msg.dischargeTime
-        }
-        var hash;
-        var q = new AppQueue.Queue(results, (Pdu) => {
-            var matched = results.length == 1;
-            if (!matched) {
-                var seconds = Math.abs(Math.floor((msg.sentTime - Pdu.time) / 1000));
-                if (seconds <= 1 * 24 * 60 * 60) matched = true;
-            }
-            if (matched) {
-                if (!hash) hash = Pdu.hash;
-                if (update) {
-                    Pdu.update(status).then(() => {
-                        q.next();
-                    });
-                } else {
-                    q.next();
-                }
-            } else {
-                q.next();
-            }
-        });
-        q.once('done', () => {
-            if (typeof done == 'function') {
-                status.imsi = origin;
-                status.address = msg.address;
-                if (hash) status.hash = hash;
-                done(status);
-            }
-        });
-    });
-}
-
-AppStorage.findPdu = function(origin, hash, done) {
-    this.PduReport.findAll({where: {imsi: origin}, order: [['time', 'DESC']]}).then((results) => {
-        var q = new AppQueue.Queue(results, (report) => {
-            this.updateReport(origin, report, false, (status) => {
-                if (status.hash == hash) {
+        this.Activity.count({where: condition}).then((count) => {
+            if (0 == count) {
+                if (!activity.imsi) activity.imsi = origin;
+                if (!activity.status) activity.status = 0;
+                if (!activity.time) activity.time = new Date();
+                if (typeof activity.data == 'string' && activity.data.length == 0) activity.data = null;
+                this.Activity.create(activity).then((result) => {
                     if (typeof done == 'function') {
-                        done(status);
+                        done(result);
+                    }
+                });
+            } else {
+                this.Activity.findOne({where: condition}).then((result) => {
+                    if (typeof activity.status != 'undefined' && result.status != activity.status) {
+                        result.update({status: activity.status});
+                    }
+                });
+            }
+        });
+    }
+
+    savePdu(origin, msg, done) {
+        const dir = msg.isSubmit ? this.DIR_OUT : this.DIR_IN;
+        const mr = typeof msg.messageReference != 'undefined' ? msg.messageReference : null;
+        const conditions = {imsi: origin, pdu: msg.pdu, dir: dir};
+        if (dir == this.DIR_OUT) {
+            conditions.mr = mr;
+        }
+        this.Pdu.count({where: conditions}).then((count) => {
+            if (count == 0) {
+                this.Pdu.create({
+                    hash: msg.hash,
+                    imsi: origin,
+                    dir: dir,
+                    address: msg.address,
+                    pdu: msg.pdu,
+                    mr: mr,
+                    time: new Date()
+                }).then((pdu) => {
+                    if (typeof done == 'function') {
+                        done(pdu);
+                    }
+                });
+            }
+        });
+    }
+
+    saveReport(origin, msg, done) {
+        this.PduReport.count({where: {imsi: origin, pdu: msg.pdu}}).then((count) => {
+            if (count == 0) {
+                return this.PduReport.create({
+                    imsi: origin,
+                    pdu: msg.pdu,
+                    time: new Date()
+                });
+            }
+            return true;
+        }).then(() => {
+            this.updateReport(origin, msg, true, done);
+        });
+    }
+
+    updateReport(origin, report, update, done) {
+        let msg;
+        if (report instanceof this.PduReport) {
+            msg = ntAtSms.decode(report.pdu);
+        } else {
+            msg = report;
+        }
+        this.Pdu.findAll({
+            where: {imsi: origin, address: msg.address, dir: this.DIR_OUT, mr: msg.messageReference},
+            order: [['time', 'DESC']]
+        }).then((results) => {
+            const status = {
+                code: msg.status,
+                sent: msg.sentTime,
+                received: msg.dischargeTime
+            }
+            let hash;
+            const q = new ntQueue(results, (Pdu) => {
+                let matched = results.length == 1;
+                if (!matched) {
+                    let seconds = Math.abs(Math.floor((msg.sentTime - Pdu.time) / 1000));
+                    if (seconds <= 1 * 24 * 60 * 60) matched = true;
+                }
+                if (matched) {
+                    if (!hash) hash = Pdu.hash;
+                    if (update) {
+                        Pdu.update(status).then(() => {
+                            q.next();
+                        });
+                    } else {
+                        q.next();
                     }
                 } else {
                     q.next();
                 }
             });
+            q.once('done', () => {
+                if (typeof done == 'function') {
+                    status.imsi = origin;
+                    status.address = msg.address;
+                    if (hash) status.hash = hash;
+                    done(status);
+                }
+            });
         });
-        q.once('done', () => {
-            if (typeof done == 'function') {
-                done({});
+    }
+
+    findPdu(origin, hash, done) {
+        this.PduReport.findAll({where: {imsi: origin}, order: [['time', 'DESC']]}).then((results) => {
+            const q = new ntQueue(results, (report) => {
+                this.updateReport(origin, report, false, (status) => {
+                    if (status.hash == hash) {
+                        if (typeof done == 'function') {
+                            done(status);
+                        }
+                    } else {
+                        q.next();
+                    }
+                });
+            });
+            q.once('done', () => {
+                if (typeof done == 'function') {
+                    done({});
+                }
+            });
+        });
+    }
+
+    getPendingActivities() {
+        return this.Activity.findAll({
+            where: {
+                status: 0,
+                type: {[Sequelize.Op.in]: [this.ACTIVITY_RING, this.ACTIVITY_INBOX, this.ACTIVITY_CUSD]}
+            },
+            order: [['time', 'ASC']]
+        });
+    }
+
+    getReports(since) {
+        if (!since) {
+            const dt = new Date();
+            since = new Date(dt.getFullYear(), dt.getMonth(), dt.getDay(), 0, 0, 0, 0);
+        } else if (!isNaN(since)) {
+            since = new Date(parseInt(since))
+        }
+        return this.PduReport.findAll({
+            where: {
+                time: {[Sequelize.Op.gte]: since}
             }
         });
-    });
-}
-
-AppStorage.getPendingActivities = function() {
-    return this.Activity.findAll({
-        where: {
-            status: 0,
-            type: {[Sequelize.Op.in]: [this.ACTIVITY_RING, this.ACTIVITY_INBOX, this.ACTIVITY_CUSD]}
-        },
-        order: [['time', 'ASC']]
-    });
-}
-
-AppStorage.getReports = function(since) {
-    if (!since) {
-        const dt = new Date();
-        since = new Date(dt.getFullYear(), dt.getMonth(), dt.getDay(), 0, 0, 0, 0);
-    } else if (!isNaN(since)) {
-        since = new Date(parseInt(since))
     }
-    return this.PduReport.findAll({
-        where: {
-            time: {[Sequelize.Op.gte]: since}
-        }
-    });
 }
+
+module.exports = new AppStorage();

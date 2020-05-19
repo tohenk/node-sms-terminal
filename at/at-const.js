@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2018 Toha <tohenk@yahoo.com>
+ * Copyright (c) 2018-2020 Toha <tohenk@yahoo.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,27 +22,29 @@
  * SOFTWARE.
  */
 
-/*
+/**
  * AT constants.
  */
+class ntAtConst {
 
-const ntAtConst     = module.exports = exports;
+    static get SMS_MODE_PDU() { return 0 }
+    static get SMS_MODE_TEXT() { return 1 }
 
-ntAtConst.SMS_MODE_PDU                        = 0;
-ntAtConst.SMS_MODE_TEXT                       = 1;
+    static get SMS_STAT_RECV_UNREAD() { return 0 }
+    static get SMS_STAT_RECV_READ() { return 1 }
+    static get SMS_STAT_STORED_UNSENT() { return 2 }
+    static get SMS_STAT_STORED_SENT() { return 3 }
+    static get SMS_STAT_ALL() { return 4 }
 
-ntAtConst.SMS_STAT_RECV_UNREAD                = 0;
-ntAtConst.SMS_STAT_RECV_READ                  = 1;
-ntAtConst.SMS_STAT_STORED_UNSENT              = 2;
-ntAtConst.SMS_STAT_STORED_SENT                = 3;
-ntAtConst.SMS_STAT_ALL                        = 4;
+    static get USSD_NO_ACTION() { return 0 }
+    static get USSD_ACTION_REQUIRED() { return 1 }
+    static get USSD_TERMINATED() { return 2 }
+    static get USSD_LOCAL_RESPOND() { return 3 }
+    static get USSD_NOT_SUPPORTED() { return 4 }
+    static get USSD_TIMEOUT() { return 5 }
 
-ntAtConst.USSD_NO_ACTION                      = 0;
-ntAtConst.USSD_ACTION_REQUIRED                = 1;
-ntAtConst.USSD_TERMINATED                     = 2;
-ntAtConst.USSD_LOCAL_RESPOND                  = 3;
-ntAtConst.USSD_NOT_SUPPORTED                  = 4;
-ntAtConst.USSD_TIMEOUT                        = 5;
+    static get USSD_ENC_7BIT() { return 15 }
+    static get USSD_ENC_UCS2() { return 72 }
+}
 
-ntAtConst.USSD_ENC_7BIT                       = 15;
-ntAtConst.USSD_ENC_UCS2                       = 72;
+module.exports = ntAtConst;
