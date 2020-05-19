@@ -211,7 +211,7 @@ class ntAtGsm extends ntAtModem {
                 for (let j = i + 1; j < unprocessed.length; j++) {
                     response += unprocessed[j];
                     if (response.length) {
-                        nextdata = new ntAtProcessor.rxdata(this, response);
+                        nextdata = new ntAtProcessorData(this, response);
                         handler = this.processor.handler(nextdata);
                         if (handler.length) {
                             resolved = i;
