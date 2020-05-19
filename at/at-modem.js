@@ -227,7 +227,7 @@ class ntAtModem extends EventEmitter {
     }
 
     getCmd = function(cmd, vars) {
-        cmd = ntAtDriverConstants.get(cmd);
+        cmd = this.driver.get(cmd);
         if (typeof cmd != 'undefined') {
             // substitude character => $XX
             let match;

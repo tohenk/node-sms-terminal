@@ -104,7 +104,7 @@ class ntAtGsm extends ntAtModem {
 
     doInitialize() {
         const queues = [ntAtDriverConstants.AT_CMD_INIT];
-        for (var i = 1; i < 10; i++) {
+        for (let i = 1; i < 10; i++) {
             queues.push(ntAtDriverConstants.AT_CMD_INIT + i.toString());
         }
         return this.txqueue(queues);
@@ -180,9 +180,10 @@ class ntAtGsm extends ntAtModem {
 
     doProcess(response) {
         if (response) {
+            let data;
             this.setState({processing: true});
             try {
-                let data = new ntAtProcessorData(this, response);
+                data = new ntAtProcessorData(this, response);
                 this.processor.process(data);
                 if (data.unprocessed && data.unprocessed.length) {
                     // in some case, on WAVECOM modem, sometime response is not properly
@@ -201,17 +202,17 @@ class ntAtGsm extends ntAtModem {
     }
 
     resolveUnprocessed(data) {
-        var result, resolved, len, response;
+        let result, resolved, len, response, nextdata, handler;
         const unprocessed = Array.isArray(this.unprocessed) ? this.unprocessed : [];
         Array.prototype.push.apply(unprocessed, data.unprocessed);
-        for (var i = 0; i < unprocessed.length; i++) {
+        for (let i = 0; i < unprocessed.length; i++) {
             response = unprocessed[i];
             if (i + 1 < unprocessed.length) {
-                for (var j = i + 1; j < unprocessed.length; j++) {
+                for (let j = i + 1; j < unprocessed.length; j++) {
                     response += unprocessed[j];
                     if (response.length) {
-                        var nextdata = new ntAtProcessor.rxdata(this, response);
-                        var handler = this.processor.handler(nextdata);
+                        nextdata = new ntAtProcessor.rxdata(this, response);
+                        handler = this.processor.handler(nextdata);
                         if (handler.length) {
                             resolved = i;
                             len = j - i;
@@ -227,7 +228,7 @@ class ntAtGsm extends ntAtModem {
             if (len > 0) {
                 unprocessed.splice(resolved + 1, len);
             }
-            var nextdata = new ntAtProcessor.rxdata(this, unprocessed);
+            nextdata = new ntAtProcessorData(this, unprocessed);
             this.processor.process(nextdata);
             if (nextdata.result) {
                 result = nextdata;
@@ -377,11 +378,11 @@ class ntAtGsm extends ntAtModem {
     }
 
     dispatchMessages() {
-        var index = 0;
+        let index = 0;
         while (this.messages.length) {
-            var nextIndex = null;
-            var report = false;
-            var msg = this.messages[index].message;
+            let nextIndex = null;
+            let report = false;
+            let msg = this.messages[index].message;
             if (msg instanceof ntAtSmsStatusReport) {
                 report = true;
                 nextIndex = this.processReport(index, msg);
@@ -390,10 +391,10 @@ class ntAtGsm extends ntAtModem {
                 nextIndex = this.processSMS(index, msg);
             }
             if (nextIndex != null) {
-                var indexes = Array.isArray(nextIndex) ? nextIndex : [nextIndex];
-                var queues = [];
+                let indexes = Array.isArray(nextIndex) ? nextIndex : [nextIndex];
+                let queues = [];
                 if (report || this.options.deleteMessageOnRead) {
-                    for (var i = 0; i < indexes.length; i++) {
+                    for (let i = 0; i < indexes.length; i++) {
                         index = indexes[i];
                         queues.push({
                             op: 'delete',
@@ -402,7 +403,7 @@ class ntAtGsm extends ntAtModem {
                         });
                     }
                 }
-                for (var i = indexes.length - 1; i >= 0; i--) {
+                for (let i = indexes.length - 1; i >= 0; i--) {
                     this.messages.splice([indexes[i]], 1);
                 }
                 if (queues.length) {
@@ -423,19 +424,19 @@ class ntAtGsm extends ntAtModem {
     }
 
     processSMS(pos, msg) {
-        var processed = false;
-        var nextPos = null;
-        var total = 1;
-        var count = 1;
+        let processed = false;
+        let nextPos = null;
+        let total = 1;
+        let count = 1;
         // check for long messages
-        var ref = msg.getReference();
+        let ref = msg.getReference();
         if (null != ref) {
             total = msg.getTotal();
             if (this.messages.length - pos > 1) {
                 const parts = {};
                 parts[pos] = msg;
-                for (var i = pos + 1; i < this.messages.length; i++) {
-                    var nmsg = this.messages[i].message;
+                for (let i = pos + 1; i < this.messages.length; i++) {
+                    let nmsg = this.messages[i].message;
                     if (!(nmsg instanceof ntAtSmsMessage)) continue;
                     // record non long messages in case the messages parts is still missing
                     if (nextPos == null && nmsg.getReference() == null) {
@@ -450,11 +451,11 @@ class ntAtGsm extends ntAtModem {
                 // is all message parts found?
                 if (count == total) {
                     processed = true;
-                    var pos = Object.keys(parts);
-                    var msg = Object.values(parts).sort((a, b) => a.getIndex() - b.getIndex());
-                    var address = null;
-                    var time = null;
-                    var content = '';
+                    pos = Object.keys(parts);
+                    let msg = Object.values(parts).sort((a, b) => a.getIndex() - b.getIndex());
+                    let address = null;
+                    let time = null;
+                    let content = '';
                     msg.forEach((message) => {
                         if (null == address) address = message.address;
                         if (null == time) time = message.time;
@@ -475,8 +476,8 @@ class ntAtGsm extends ntAtModem {
                 // if long messages parts was still missing then process non long one
                 this.debug('%s: Waiting for other messages part from %s, found %d/%d', this.name, msg.address, count, total);
                 if (nextPos != null) {
-                    var msg = this.messages[nextPos].message;
-                    var pos = nextPos;
+                    msg = this.messages[nextPos].message;
+                    pos = nextPos;
                     processed = true;
                 }
             }
@@ -492,13 +493,13 @@ class ntAtGsm extends ntAtModem {
     }
 
     getMessageReference() {
-        var result = 0;
+        let result = 0;
         if (this.msgRefFilename) {
             if (fs.existsSync(this.msgRefFilename)) {
                 const ref = JSON.parse(fs.readFileSync(this.msgRefFilename));
                 result = ref.msgref;
             }
-            var nextRef = result;
+            let nextRef = result;
             nextRef++;
             if (nextRef > 255) nextRef = 0;
             fs.writeFileSync(this.msgRefFilename, JSON.stringify({
@@ -514,7 +515,7 @@ class ntAtGsm extends ntAtModem {
 
     getHash() {
         const args = Array.from(arguments);
-        var dt = new Date();
+        let dt = new Date();
         if (args.length && args[0] instanceof Date) {
             dt = args.shift();
         }
@@ -600,16 +601,16 @@ class ntAtGsm extends ntAtModem {
                         this.debug('%s: Updating storage information from "%s"', this.name, JSON.stringify(storage));
                     }
                     if (res.hasResponse()) {
-                        var data = this.doProcess(res.responses);
+                        let data = this.doProcess(res.responses);
                         if (typeof options.context == 'object' && typeof data.result == 'object') {
                             Object.assign(options.context, data.result);
                         }
-                        resolve(data.result);
+                        resolve(data.result ? data.result : data);
                     } else {
                         resolve();
                     }
                 }).catch((err) => {
-                    var msg = err;
+                    let msg = err;
                     if (err instanceof ntAtResponse) {
                         if (err.timeout) {
                             msg = util.format('%s: Operation timeout', err.data);
@@ -639,7 +640,7 @@ class ntAtGsm extends ntAtModem {
         const f = (str, search, replace) => {
             return str.replace(search, replace);
         }
-        var str = this.getCmd(cmd, vars);
+        let str = this.getCmd(cmd, vars);
         ['+', '='].forEach((escape) => {
             str = f(str, escape, '\\' + escape);
         });
@@ -647,7 +648,7 @@ class ntAtGsm extends ntAtModem {
             str = f(str, '_' + key + '_', patterns[key]);
         });
         const re = new RegExp(str);
-        var match;
+        let match;
         if (match = re.exec(data)) {
             return match[1];
         }
@@ -675,10 +676,9 @@ class ntAtGsm extends ntAtModem {
         }
         const dcs = ntAtSms.detectCodingScheme(message);
         const messages = ntAtSms.smsSplit(dcs, message);
-        var index = 0;
-        var reference = messages.length > 1 ? this.getMessageReference() : null;
-        for (var index = 0; index < messages.length; index++) {
-            var msg = new ntAtSmsMessage();
+        let reference = messages.length > 1 ? this.getMessageReference() : null;
+        for (let index = 0; index < messages.length; index++) {
+            let msg = new ntAtSmsMessage();
             msg.dcs = dcs;
             msg.address = phoneNumber;
             if (messages.length > 1) {
@@ -799,7 +799,7 @@ class ntAtGsm extends ntAtModem {
                 if (this.props.storage == storage && this.props.storageTotal) {
                     const queues = [];
                     // 1 based storage index
-                    for (var i = 1; i <= this.props.storageTotal; i++) {
+                    for (let i = 1; i <= this.props.storageTotal; i++) {
                         queues.push({
                             op: 'delete',
                             storage: storage,
