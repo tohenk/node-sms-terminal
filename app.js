@@ -55,8 +55,8 @@ const database = {
     password: null,
     database: 'smsgw'
 }
-var config = {};
-var configFile;
+let config = {};
+let configFile;
 // read configuration from command line values
 if (Cmd.get('config') && fs.existsSync(Cmd.get('config'))) {
     configFile = Cmd.get('config');
