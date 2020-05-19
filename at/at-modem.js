@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2018 Toha <tohenk@yahoo.com>
+ * Copyright (c) 2018-2020 Toha <tohenk@yahoo.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -56,7 +56,7 @@ class ntAtModem extends EventEmitter {
         this.detected = false;
         this.timedout = 0;
     }
-    
+
     getConfig(name, defaultValue) {
         if (this.config && typeof this.config[name] != 'undefined') {
             return this.config[name];
@@ -181,7 +181,7 @@ class ntAtModem extends EventEmitter {
                     this.debug('!!! %s: Timeout threshold reached, modem may be unresponsive. Try to restart', this.name);
                 }
                 this.log('TX> %s', data);
-                this.stream.write(data + this.getCmd(ntAtDriver.AT_PARAM_TERMINATOR), (err) => {
+                this.stream.write(data + this.getCmd(ntAtDriverConstants.AT_PARAM_TERMINATOR), (err) => {
                     if (err) {
                         this.log('ERR> %s', err.message);
                         return reject(err);

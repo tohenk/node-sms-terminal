@@ -34,7 +34,7 @@ const { ntAtSms, ntAtSmsMessage, ntAtSmsStatusReport } = require('./at-sms');
 const ntQueue       = require('./../lib/queue');
 const ntWork        = require('./../lib/work');
 
-var msgref = 0;
+let msgref = 0;
 
 /**
  * AT GSM handles send and receive text message, and other GSM functionalities.
