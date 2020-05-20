@@ -194,7 +194,7 @@ class ntAtGsm extends ntAtModem {
                     }
                 }
             } catch (e) {
-                this.debug('!!! %s: %s', this.name, e.message);
+                this.debug('!!! %s: %s', this.name, e.stack ? e.stack : e.message);
             }
             this.setState({processing: false});
             return data;
@@ -600,12 +600,15 @@ class ntAtGsm extends ntAtModem {
                         Object.assign(this.props, storage);
                         this.debug('%s: Updating storage information from "%s"', this.name, JSON.stringify(storage));
                     }
+                    let data;
                     if (res.hasResponse()) {
-                        let data = this.doProcess(res.responses);
+                        data = this.doProcess(res.responses);
                         if (typeof options.context == 'object' && typeof data.result == 'object') {
                             Object.assign(options.context, data.result);
                         }
-                        resolve(data.result ? data.result : data);
+                    }
+                    if (data && data.result) {
+                        resolve(data.result);
                     } else {
                         resolve();
                     }

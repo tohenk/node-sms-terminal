@@ -604,6 +604,7 @@ class ntAtSms {
         E8329BFD4697D9EC37  TP-User-Data. These octets represent the message "hellohello". How to do the transformation from 7bit septets into
                             octets is shown here
         */
+        let result;
         const seq = new CharSequence(PDU);
         try {
             let pduSize, pduType, len, smsc, dcs;
@@ -637,7 +638,7 @@ class ntAtSms {
             }
             let isSubmit = (pduType & 3) == 1;
             let isReport = (pduType & 3) == 2;
-            let result = !isReport ? new ntAtSmsMessage() : new ntAtSmsStatusReport();
+            result = !isReport ? new ntAtSmsMessage() : new ntAtSmsStatusReport();
             result.pdu = PDU;
             result.tplen = pduSize;
             result.submit = isSubmit;
@@ -990,7 +991,7 @@ class ntAtSmsMessage {
             data = this.udhi || {};
         }
         if (typeof data.reference != 'undefined') {
-            type = data.reference > 0xff ? sms.SMS_16BIT_REF : sms.SMS_8BIT_REF;
+            let type = data.reference > 0xff ? sms.SMS_16BIT_REF : sms.SMS_8BIT_REF;
             result = sms.hexPad(data.reference.toString(16).toUpperCase(),
                 type == sms.SMS_16BIT_REF ? 4 : 2);
             result += sms.hexPad(data.total.toString(16).toUpperCase(), 2);
