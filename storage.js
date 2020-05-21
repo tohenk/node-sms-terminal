@@ -48,11 +48,10 @@ class AppStorage {
             this.Activity = this.import('Activity');
             this.Pdu = this.import('Pdu');
             this.PduReport = this.import('PduReport');
-            this.db.authenticate().then(() => {
-                resolve();
-            }).catch((err) => {
-                reject(err);
-            });
+            this.db.authenticate()
+                .then(() => resolve())
+                .catch((err) => reject(err))
+            ;
         });
     }
 
@@ -67,25 +66,31 @@ class AppStorage {
             type: activity.type,
             address: activity.address
         }
-        this.Activity.count({where: condition}).then((count) => {
-            if (0 == count) {
-                if (!activity.imsi) activity.imsi = origin;
-                if (!activity.status) activity.status = 0;
-                if (!activity.time) activity.time = new Date();
-                if (typeof activity.data == 'string' && activity.data.length == 0) activity.data = null;
-                this.Activity.create(activity).then((result) => {
-                    if (typeof done == 'function') {
-                        done(result);
-                    }
-                });
-            } else {
-                this.Activity.findOne({where: condition}).then((result) => {
-                    if (typeof activity.status != 'undefined' && result.status != activity.status) {
-                        result.update({status: activity.status});
-                    }
-                });
-            }
-        });
+        this.Activity.count({where: condition})
+            .then((count) => {
+                if (0 == count) {
+                    if (!activity.imsi) activity.imsi = origin;
+                    if (!activity.status) activity.status = 0;
+                    if (!activity.time) activity.time = new Date();
+                    if (typeof activity.data == 'string' && activity.data.length == 0) activity.data = null;
+                    this.Activity.create(activity)
+                        .then((result) => {
+                            if (typeof done == 'function') {
+                                done(result);
+                            }
+                        })
+                    ;
+                } else {
+                    this.Activity.findOne({where: condition})
+                        .then((result) => {
+                            if (typeof activity.status != 'undefined' && result.status != activity.status) {
+                                result.update({status: activity.status});
+                            }
+                        })
+                    ;
+                }
+            })
+        ;
     }
 
     savePdu(origin, msg, done) {
@@ -95,38 +100,45 @@ class AppStorage {
         if (dir == this.DIR_OUT) {
             conditions.mr = mr;
         }
-        this.Pdu.count({where: conditions}).then((count) => {
-            if (count == 0) {
-                this.Pdu.create({
-                    hash: msg.hash,
-                    imsi: origin,
-                    dir: dir,
-                    address: msg.address,
-                    pdu: msg.pdu,
-                    mr: mr,
-                    time: new Date()
-                }).then((pdu) => {
-                    if (typeof done == 'function') {
-                        done(pdu);
-                    }
-                });
-            }
-        });
+        this.Pdu.count({where: conditions})
+            .then((count) => {
+                if (count == 0) {
+                    this.Pdu.create({
+                            hash: msg.hash,
+                            imsi: origin,
+                            dir: dir,
+                            address: msg.address,
+                            pdu: msg.pdu,
+                            mr: mr,
+                            time: new Date()
+                        })
+                        .then((pdu) => {
+                            if (typeof done == 'function') {
+                                done(pdu);
+                            }
+                        })
+                    ;
+                }
+            })
+        ;
     }
 
     saveReport(origin, msg, done) {
-        this.PduReport.count({where: {imsi: origin, pdu: msg.pdu}}).then((count) => {
-            if (count == 0) {
-                return this.PduReport.create({
-                    imsi: origin,
-                    pdu: msg.pdu,
-                    time: new Date()
-                });
-            }
-            return true;
-        }).then(() => {
-            this.updateReport(origin, msg, true, done);
-        });
+        this.PduReport.count({where: {imsi: origin, pdu: msg.pdu}})
+            .then((count) => {
+                if (count == 0) {
+                    return this.PduReport.create({
+                        imsi: origin,
+                        pdu: msg.pdu,
+                        time: new Date()
+                    });
+                }
+                return true;
+            })
+            .then(() => {
+                this.updateReport(origin, msg, true, done);
+            })
+        ;
     }
 
     updateReport(origin, report, update, done) {
@@ -155,9 +167,11 @@ class AppStorage {
                 if (matched) {
                     if (!hash) hash = Pdu.hash;
                     if (update) {
-                        Pdu.update(status).then(() => {
-                            q.next();
-                        });
+                        Pdu.update(status)
+                            .then(() => {
+                                q.next();
+                            })
+                        ;
                     } else {
                         q.next();
                     }
@@ -177,24 +191,26 @@ class AppStorage {
     }
 
     findPdu(origin, hash, done) {
-        this.PduReport.findAll({where: {imsi: origin}, order: [['time', 'DESC']]}).then((results) => {
-            const q = new ntQueue(results, (report) => {
-                this.updateReport(origin, report, false, (status) => {
-                    if (status.hash == hash) {
-                        if (typeof done == 'function') {
-                            done(status);
+        this.PduReport.findAll({where: {imsi: origin}, order: [['time', 'DESC']]})
+            .then((results) => {
+                const q = new ntQueue(results, (report) => {
+                    this.updateReport(origin, report, false, (status) => {
+                        if (status.hash == hash) {
+                            if (typeof done == 'function') {
+                                done(status);
+                            }
+                        } else {
+                            q.next();
                         }
-                    } else {
-                        q.next();
+                    });
+                });
+                q.once('done', () => {
+                    if (typeof done == 'function') {
+                        done({});
                     }
                 });
-            });
-            q.once('done', () => {
-                if (typeof done == 'function') {
-                    done({});
-                }
-            });
-        });
+            })
+        ;
     }
 
     getPendingActivities() {

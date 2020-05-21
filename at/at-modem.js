@@ -28,6 +28,7 @@ const EventEmitter  = require('events');
 const util          = require('util');
 const { ntAtDriver, ntAtDriverConstants } = require('./at-driver');
 const ntQueue       = require('./../lib/queue');
+const ntWork        = require('./../lib/work');
 const ntUtil        = require('./../lib/util');
 const ntLogger      = require('./../lib/logger');
 
@@ -73,24 +74,29 @@ class ntAtModem extends EventEmitter {
     }
 
     detect() {
-        return new Promise((resolve, reject) => {
-            this.useDriver('Generic');
-            this.tx('AT', {timeout: 1000}).then(() => {
-                this.tx(this.getCmd(ntAtDriverConstants.AT_CMD_Q_FRIENDLY_NAME)).then((result) => {
-                    let driver = ntAtDriver.match(result.res());
-                    driver = driver.length ? driver : this.driver.name;
-                    if (driver.length) {
-                        this.detected = true;
-                        this.useDriver(driver);
+        return ntWork.works([
+            () => Promise.resolve(this.useDriver('Generic')),
+            () => new Promise((resolve, reject) => {
+                this.tx('AT', {timeout: 1000})
+                    .then(() => resolve())
+                    .catch(() => reject(util.format('%s: not an AT modem.', this.name)))
+                ;
+            }),
+            () => new Promise((resolve, reject) => {
+                this.tx(this.getCmd(ntAtDriverConstants.AT_CMD_Q_FRIENDLY_NAME))
+                    .then((result) => {
+                        let driver = ntAtDriver.match(result.res());
+                        driver = driver.length ? driver : this.driver.name;
+                        if (driver.length) {
+                            this.detected = true;
+                            this.useDriver(driver);
+                        }
                         resolve(this.driver);
-                    }
-                }).catch(() => {
-                    reject(util.format('%s: modem information not available.', this.name));
-                });
-            }).catch(() => {
-                reject(util.format('%s: not an AT modem.', this.name));
-            });
-        });
+                    })
+                    .catch(() => reject(util.format('%s: modem information not available.', this.name)))
+                ;
+            }),
+        ]);
     }
 
     disconnect() {
@@ -200,13 +206,14 @@ class ntAtModem extends EventEmitter {
             const q = new ntQueue(queues, (data) => {
                 let cmd = Array.isArray(data) ? data[0] : data;
                 let vars = Array.isArray(data) ? data[1] : null;
-                this.tx(this.getCmd(cmd, vars)).then((res) => {
-                    if (!q.responses) q.responses = {};
-                    q.responses[cmd] = res;
-                    q.next();
-                }).catch(() => {
-                    q.next();
-                });
+                this.tx(this.getCmd(cmd, vars))
+                    .then((res) => {
+                        if (!q.responses) q.responses = {};
+                        q.responses[cmd] = res;
+                        q.next();
+                    })
+                    .catch(() => q.next())
+                ;
             });
             q.once('done', () => {
                 resolve(q.responses);

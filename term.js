@@ -57,58 +57,57 @@ class AppTerm {
             requestReply: 'requestMessageReply',
             emptyWhenFull: 'emptyWhenFull'
         };
-        return new Promise((resolve, reject) => {
-            try {
-                this.initializeLogger();
-                this.loadNetworks();
-                this.loadICC();
-                this.initializePool();
-                this.listPorts(() => {
-                    this.Storage.init(config.database).then(() => {
-                        resolve();
-                    }).catch((err) => {
-                        reject(err);
-                    });
-                });
-            } catch(e) {
-                reject(e.message);
-            }
-        });
+        return ntWork.works([
+            () => this.initializeLogger(),
+            () => this.loadNetworks(),
+            () => this.loadICC(),
+            () => this.initializePool(),
+            () => this.listPorts(),
+            () => this.Storage.init(config.database),
+        ]);
     }
 
     initializeLogger() {
-        this.logdir = this.config.logdir || path.join(__dirname, 'logs');
-        this.logfile = path.join(this.logdir, 'activity.log');
-        this.logger = new ntLogger(this.logfile);
+        return new Promise((resolve, reject) => {
+            this.logdir = this.config.logdir || path.join(__dirname, 'logs');
+            this.logfile = path.join(this.logdir, 'activity.log');
+            this.logger = new ntLogger(this.logfile);
+            resolve();
+        });
     }
 
     initializePool() {
-        this.Pool.Driver.load(this.config.driverFilename);
-        this.Pool.init((portName) => {
-            return new Promise((resolve, reject) => {
-                const portId = this.ports[portName];
-                if (portId) {
-                    const port = new SerialPort(portId, {baudRate: 115200}, (err) => {
-                        if (err) {
-                            return reject(err.message);
-                        }
-                        resolve(port);
-                    });
-                } else {
-                    reject('Port ' + portName + ' not exist.');
-                }
-            });
-        }, this.config);
+        return new Promise((resolve, reject) => {
+            this.Pool.Driver.load(this.config.driverFilename);
+            this.Pool.init((portName) => {
+                return new Promise((resolve, reject) => {
+                    const portId = this.ports[portName];
+                    if (portId) {
+                        const port = new SerialPort(portId, {baudRate: 115200}, (err) => {
+                            if (err) {
+                                return reject(err.message);
+                            }
+                            resolve(port);
+                        });
+                    } else {
+                        reject('Port ' + portName + ' does not exist.');
+                    }
+                });
+            }, this.config);
+            resolve();
+        });
     }
 
-    listPorts(done) {
-        this.ports = {};
-        SerialPort.list((error, ports) => {
-            ports.forEach((item) => {
-                const portName = path.basename(item.comName);
-                this.ports[portName] = item.comName;
+    listPorts() {
+        return new Promise((resolve, reject) => {
+            this.ports = {};
+            SerialPort.list((error, ports) => {
+                ports.forEach((item) => {
+                    const portName = path.basename(item.comName);
+                    this.ports[portName] = item.comName;
+                });
+                resolve();
             });
-            done();
         });
     }
 
@@ -132,16 +131,18 @@ class AppTerm {
     }
 
     loadICC() {
-        if (this.iccFilename && fs.existsSync(this.iccFilename)) {
-            this.icc = ini.parse(fs.readFileSync(this.iccFilename, 'utf-8'));
-        }
-        return this;
+        return new Promise((resolve, reject) => {
+            if (this.iccFilename && fs.existsSync(this.iccFilename)) {
+                this.icc = ini.parse(fs.readFileSync(this.iccFilename, 'utf-8'));
+            }
+            resolve();
+        });
     }
 
     getICC(country) {
         if (this.icc) {
-            for (var code in this.icc.ICC) {
-                var ctry = this.icc.ICC[code];
+            for (let code in this.icc.ICC) {
+                let ctry = this.icc.ICC[code];
                 if (ctry.indexOf(country) >= 0) {
                     return this.cleanICC(code);
                 }
@@ -158,8 +159,8 @@ class AppTerm {
         const result = [];
         if (this.icc) {
             if (phoneNumber.charAt(0) == '+') phoneNumber = phoneNumber.substr(1);
-            for (var code in this.icc.ICC) {
-                var icc = this.cleanICC(code);
+            for (let code in this.icc.ICC) {
+                let icc = this.cleanICC(code);
                 if (phoneNumber.substr(0, icc.length) == icc) {
                     result.push(icc);
                     result.push(phoneNumber.substr(icc.length));
@@ -174,23 +175,25 @@ class AppTerm {
     }
 
     open(portName) {
-        return new Promise((resolve, reject) => {
-            this.Pool.open(portName).then((gsm) => {
-                return this.applyHandler(gsm);
-            }).then((gsm) => {
-                if (this.config.readNewMessage) {
-                    gsm.listMessage(AtConst.SMS_STAT_RECV_UNREAD).then(() => {
+        let gsm;
+        return ntWork.works([
+            () => new Promise((resolve, reject) => {
+                this.Pool.open(portName)
+                    .then((xgsm) => {
+                        gsm = this.applyHandler(xgsm);
                         resolve();
-                    }).catch(() => {
-                        resolve();
-                    });
-                } else {
-                    resolve();
-                }
-            }).catch((err) => {
-                reject(err);
-            });
-        });
+                    })
+                    .catch((err) => reject(err))
+                ;
+            }),
+            () => new Promise((resolve, reject) => {
+                if (!this.config.readNewMessage) return resolve();
+                gsm.listMessage(AtConst.SMS_STAT_RECV_UNREAD)
+                    .then(() => resolve())
+                    .catch(() => resolve())
+                ;
+            })
+        ]);
     }
 
     applyHandler(gsm) {
@@ -206,9 +209,9 @@ class AppTerm {
             }
             // ---- OUTGOING ----
             gsm.on('pdu', (success, messages) => {
-                var hash = null;
-                var address = null;
-                var content = '';
+                let hash = null;
+                let address = null;
+                let content = '';
                 messages.forEach((message) => {
                     if (null == hash) hash = message.hash;
                     if (null == address) address = message.address;
@@ -259,10 +262,10 @@ class AppTerm {
                 });
             });
             gsm.on('message', (messages) => {
-                var messages = Array.isArray(messages) ? messages : [messages];
-                var hash = null;
-                var address = null;
-                var content = '';
+                messages = Array.isArray(messages) ? messages : [messages];
+                let hash = null;
+                let address = null;
+                let content = '';
                 messages.forEach((message) => {
                     if (null == hash) hash = message.hash;
                     if (null == address) address = message.address;
@@ -371,38 +374,50 @@ class AppTerm {
                         });
                     });
                     socket.on('status', (hash) => {
-                        this.Storage.Activity.findOne({where: {imsi: gsm.info.imsi, hash: hash}}).then((Activity) => {
-                            socket.emit('status', {success: true, hash: hash, status: Activity.status});
-                        }).catch(() => {
-                            socket.emit('status', {success: false, hash: hash});
-                        });
+                        this.Storage.Activity.findOne({where: {imsi: gsm.info.imsi, hash: hash}})
+                            .then((Activity) => {
+                                socket.emit('status', {success: true, hash: hash, status: Activity.status});
+                            })
+                            .catch(() => {
+                                socket.emit('status', {success: false, hash: hash});
+                            })
+                        ;
                     });
                     socket.on('message', (data) => {
-                        gsm.sendMessage(data.address, data.data, data.hash).then(() => {
-                            data.success = true;
-                            socket.emit('message', data);
-                        }).catch(() => {
-                            data.success = false;
-                            socket.emit('message', data);
-                        });
+                        gsm.sendMessage(data.address, data.data, data.hash)
+                            .then(() => {
+                                data.success = true;
+                                socket.emit('message', data);
+                            })
+                            .catch(() => {
+                                data.success = false;
+                                socket.emit('message', data);
+                            })
+                        ;
                     });
                     socket.on('dial', (data) => {
-                        gsm.dial(data.address, data.hash).then(() => {
-                            data.success = true;
-                            socket.emit('dial', data);
-                        }).catch(() => {
-                            data.success = false;
-                            socket.emit('dial', data);
-                        });
+                        gsm.dial(data.address, data.hash)
+                            .then(() => {
+                                data.success = true;
+                                socket.emit('dial', data);
+                            })
+                            .catch(() => {
+                                data.success = false;
+                                socket.emit('dial', data);
+                            })
+                        ;
                     });
                     socket.on('ussd', (data) => {
-                        gsm.ussd(data.address, data.hash).then(() => {
-                            data.success = true;
-                            socket.emit('ussd', data);
-                        }).catch(() => {
-                            data.success = false;
-                            socket.emit('ussd', data);
-                        });
+                        gsm.ussd(data.address, data.hash)
+                            .then(() => {
+                                data.success = true;
+                                socket.emit('ussd', data);
+                            })
+                            .catch(() => {
+                                data.success = false;
+                                socket.emit('ussd', data);
+                            })
+                        ;
                     });
                 });
                 // state broadcast
@@ -410,6 +425,7 @@ class AppTerm {
                     gsm.io.emit('state', {idle: gsm.idle && gsm.queueCount() == 0});
                 });
             }
+            let icc;
             if (this.networks.length && gsm.props.network) {
                 const info = this.networks.filter((item) => {
                     return item.Code == gsm.props.network.code ? true : false
@@ -419,14 +435,14 @@ class AppTerm {
                     gsm.props.network.country = info[0].Country;
                 }
                 if (gsm.props.network.country && this.icc) {
-                    var icc = this.getICC(gsm.props.network.country);
+                    icc = this.getICC(gsm.props.network.country);
                     if (icc) {
                         gsm.countryCode = icc;
                     }
                 }
             }
             if (!gsm.countryCode && gsm.props.smsc) {
-                var icc = this.splitNumber(gsm.props.smsc);
+                icc = this.splitNumber(gsm.props.smsc);
                 if (icc.length == 2) {
                     gsm.countryCode = icc[0];
                 }
@@ -479,40 +495,46 @@ class AppTerm {
         Object.keys(this.ports).forEach((portName) => {
             const gsm = this.Pool.get(portName);
             if (gsm && gsm.info.imsi) {
-                gsm.asQueue().listMessage(AtConst.SMS_STAT_RECV_UNREAD);
+                gsm.listMessage(AtConst.SMS_STAT_RECV_UNREAD);
             }
         });
-        this.Storage.getPendingActivities().then((results) => {
-            console.log('Processing pending activity: %d', results.length);
-            const q = new ntQueue(results, (activity) => {
-                this.notifyActivity(activity);
-                activity.update({status: 1}).then(() => {
-                    q.next();
+        this.Storage.getPendingActivities()
+            .then((results) => {
+                console.log('Processing pending activity: %d', results.length);
+                const q = new ntQueue(results, (activity) => {
+                    this.notifyActivity(activity);
+                    activity.update({status: 1})
+                        .then(() => {
+                            q.next();
+                        })
+                    ;
                 });
-            });
-        });
+            })
+        ;
     }
 
     checkReport(since) {
-        this.Storage.getReports(since).then((results) => {
-            console.log('Processing report: %d', results.length);
-            const q = new ntQueue(results, (report) => {
-                try {
-                    this.Storage.updateReport(report.imsi, report, false, (status) => {
-                        if (status.hash) {
-                            console.log('Renotify status report: %s', status.hash);
-                            if (this.termCon) {
-                                this.termCon.to(this.ClientRoom).emit('status-report', status);
+        this.Storage.getReports(since)
+            .then((results) => {
+                console.log('Processing report: %d', results.length);
+                const q = new ntQueue(results, (report) => {
+                    try {
+                        this.Storage.updateReport(report.imsi, report, false, (status) => {
+                            if (status.hash) {
+                                console.log('Renotify status report: %s', status.hash);
+                                if (this.termCon) {
+                                    this.termCon.to(this.ClientRoom).emit('status-report', status);
+                                }
                             }
-                        }
+                            q.next();
+                        });
+                    } catch (e) {
+                        console.log(e);
                         q.next();
-                    });
-                } catch (e) {
-                    console.log(e.message);
-                    q.next();
-                }
-            });
-        });
+                    }
+                });
+            })
+        ;
     }
 
     checkMessage(type) {
@@ -530,12 +552,13 @@ class AppTerm {
         Object.keys(this.ports).forEach((portName) => {
             works.push(() => {
                 return new Promise((resolve, reject) => {
-                    this.open(portName).then(() => {
-                        resolve();
-                    }).catch((err) => {
-                        console.log(err);
-                        resolve();
-                    });
+                    this.open(portName)
+                        .then(() => resolve())
+                        .catch((err) => {
+                            console.log(err);
+                            resolve();
+                        })
+                    ;
                 });
             });
         });
@@ -605,11 +628,14 @@ class AppTerm {
             });
             socket.on('init', () => {
                 if (this.clients.indexOf(socket) < 0) return;
-                this.detectAll().then(() => {
-                    socket.emit('ready', this.getTerminals());
-                }).catch((err) => {
-                    console.log('Terminal initialization error: %s', err);
-                });
+                this.detectAll()
+                    .then(() => {
+                        socket.emit('ready', this.getTerminals());
+                    })
+                    .catch((err) => {
+                        console.log('Terminal initialization error: %s', err);
+                    })
+                ;
             });
             socket.on('check-pending', () => {
                 if (this.clients.indexOf(socket) < 0) return;

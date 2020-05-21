@@ -169,8 +169,15 @@ class ntAtProcessor {
                             case ntAtDriverConstants.AT_RESPONSE_NEW_MESSAGE_DIRECT:
                                 break;
                             case ntAtDriverConstants.AT_RESPONSE_CMGR:
-                                storage = this.parent.queue ? this.parent.queue.storage : this.parent.props.storage;
-                                storageIndex = this.parent.queue ? this.parent.queue.index : this.parent.props.storageIndex;
+                                if (this.parent.queue &&
+                                    this.parent.queue.info &&
+                                    this.parent.queue.info.storage) {
+                                    storage = this.parent.queue.info.storage;
+                                    storageIndex = this.parent.queue.info.index;
+                                } else {
+                                    storage = this.parent.props.storage;
+                                    storageIndex = this.parent.props.storageIndex;
+                                }
                                 storageStatus = tokens[0];
                                 break;
                             case ntAtDriverConstants.AT_RESPONSE_CMGL:

@@ -24,6 +24,7 @@
 
 const { ntAtDriver } = require('./at-driver');
 const ntAtGsm        = require('./at-gsm');
+const ntWork         = require('./../lib/work');
 
 /**
  * AT modems pool.
@@ -37,57 +38,60 @@ class ntAtPool {
         this.streamFactory = factory;
         this.config = config;
     }
-    
+
     open(streamName) {
         let gsm = this.get(streamName);
-        if (gsm) {
-            return new Promise((resolve, reject) => {
-                resolve(gsm);
-            });
+        if (gsm) return Promise.resolve(gsm);
+        if (typeof this.streamFactory != 'function') {
+            return Promise.reject('Invalid stream factory, only function accepted.');
         }
-        if (typeof this.streamFactory == 'function') {
-            return new Promise((resolve, reject) => {
-                this.streamFactory(streamName).then((stream) => {
-                    console.log('%s: Try detecting modem...', streamName);
-                    return new ntAtGsm(streamName, stream, this.config);
-                }).then((gsm) => {
-                    gsm.detect().then((driver) => {
+        return ntWork.works([
+            () => new Promise((resolve, reject) => {
+                this.streamFactory(streamName)
+                    .then((stream) => {
+                        console.log('%s: Try detecting modem...', streamName);
+                        gsm = new ntAtGsm(streamName, stream, this.config);
+                        resolve();
+                    })
+                    .catch((err) => reject(err))
+                ;
+            }),
+            () => new Promise((resolve, reject) => {
+                gsm.detect()
+                    .then((driver) => {
                         console.log('%s: Modem successfully detected as %s.', streamName, driver.desc);
-                        gsm.initialize().then(() => {
-                            this.items[streamName] = gsm;
-                            console.log('%s: Modem information:', streamName);
-                            console.log('-'.repeat(50));
-                            console.log('Manufacturer       = %s', gsm.info.manufacturer);
-                            console.log('Model              = %s', gsm.info.model);
-                            console.log('Version            = %s', gsm.info.version);
-                            console.log('Serial             = %s', gsm.info.serial);
-                            console.log('IMSI               = %s', gsm.info.imsi);
-                            console.log('Call monitor       = %s', gsm.info.hasCall ? 'yes' : 'no');
-                            console.log('SMS monitor        = %s', gsm.info.hasSms ? 'yes' : 'no');
-                            console.log('USSD monitor       = %s', gsm.info.hasUssd ? 'yes' : 'no');
-                            console.log('Charsets           = %s', gsm.props.charsets.join(', '));
-                            console.log('Default charset    = %s', gsm.props.charset);
-                            console.log('SMS Mode           = %s', gsm.props.smsMode);
-                            console.log('Default storage    = %s', gsm.props.storage);
-                            console.log('SMSC               = %s', gsm.props.smsc);
-                            console.log('Network operator   = %s', gsm.props.network.code);
-                            console.log('-'.repeat(50));
-                            resolve(gsm);
-                        }).catch((err) => {
-                            reject(err);
-                        });
-                    }).catch((err) => {
-                        reject(err);
-                    });
-                }).catch((err) => {
-                    reject(err);
-                });
-            });
-        } else {
-            return new Promise((resolve, reject) => {
-                reject('Stream factory is not avaliable.');
-            });
-        }
+                        resolve();
+                    })
+                    .catch((err) => reject(err))
+                ;
+            }),
+            () => new Promise((resolve, reject) => {
+                gsm.initialize()
+                    .then(() => {
+                        this.items[streamName] = gsm;
+                        console.log('%s: Modem information:', streamName);
+                        console.log('-'.repeat(50));
+                        console.log('Manufacturer       = %s', gsm.info.manufacturer);
+                        console.log('Model              = %s', gsm.info.model);
+                        console.log('Version            = %s', gsm.info.version);
+                        console.log('Serial             = %s', gsm.info.serial);
+                        console.log('IMSI               = %s', gsm.info.imsi);
+                        console.log('Call monitor       = %s', gsm.info.hasCall ? 'yes' : 'no');
+                        console.log('SMS monitor        = %s', gsm.info.hasSms ? 'yes' : 'no');
+                        console.log('USSD monitor       = %s', gsm.info.hasUssd ? 'yes' : 'no');
+                        console.log('Charsets           = %s', gsm.props.charsets.join(', '));
+                        console.log('Default charset    = %s', gsm.props.charset);
+                        console.log('SMS Mode           = %s', gsm.props.smsMode);
+                        console.log('Default storage    = %s', gsm.props.storage);
+                        console.log('SMSC               = %s', gsm.props.smsc);
+                        console.log('Network operator   = %s', gsm.props.network.code);
+                        console.log('-'.repeat(50));
+                        resolve(gsm);
+                    })
+                    .catch((err) => reject(err))
+                ;
+            }),
+        ]);
     }
 
     get(streamName) {

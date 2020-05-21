@@ -108,15 +108,18 @@ if (!config.database.logging) {
 config.logUssd = Cmd.get('log-ussd') ? true : false;
 config.readNewMessage = Cmd.get('read-new-message') ? true : false;
 
-AppTerm.init(config).then(() => {
-    run();
-}).catch((err) => {
-    if (err instanceof Error) {
-        console.log('%s: %s', err.name, err.message);
-    } else {
-        console.log(err);
-    }
-});
+AppTerm.init(config)
+    .then(() => {
+        run();
+    })
+    .catch((err) => {
+        if (err instanceof Error) {
+            console.log('%s: %s', err.name, err.message);
+        } else {
+            console.log(err);
+        }
+    })
+;
 
 function run() {
     const ports = Object.keys(AppTerm.ports);
