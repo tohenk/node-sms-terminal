@@ -45,18 +45,14 @@ class AppStorage {
     init(options) {
         return new Promise((resolve, reject) => {
             this.db = new Sequelize(options);
-            this.Activity = this.import('Activity');
-            this.Pdu = this.import('Pdu');
-            this.PduReport = this.import('PduReport');
+            this.Activity = require('./model/Activity')(this.db);
+            this.Pdu = require('./model/Pdu')(this.db);
+            this.PduReport = require('./model/PduReport')(this.db);
             this.db.authenticate()
                 .then(() => resolve())
                 .catch((err) => reject(err))
             ;
         });
-    }
-
-    import(model) {
-        return this.db.import(path.join(__dirname, 'model', model));
     }
 
     saveActivity(origin, activity, done) {
