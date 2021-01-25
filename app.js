@@ -46,7 +46,6 @@ const crypto        = require('crypto');
 const fs            = require('fs');
 const ntUtil        = require('./lib/util');
 const ntLogger      = require('./lib/logger');
-const AppTerm       = require('./term');
 
 const database = {
     dialect: 'mysql',
@@ -55,108 +54,133 @@ const database = {
     password: null,
     database: 'smsgw'
 }
-let config = {};
-let configFile;
-// read configuration from command line values
-if (Cmd.get('config') && fs.existsSync(Cmd.get('config'))) {
-    configFile = Cmd.get('config');
-} else if (fs.existsSync(path.join(__dirname, 'config.json'))) {
-    configFile = path.join(__dirname, 'config.json');
-}
-if (configFile) {
-    console.log('Reading configuration %s', configFile);
-    config = JSON.parse(fs.readFileSync(configFile));
-}
-if (Cmd.get('driver') && fs.existsSync(Cmd.get('driver'))) {
-    config.driverFilename = Cmd.get('driver');
-}
-if (Cmd.get('logdir') && fs.existsSync(Cmd.get('logdir'))) {
-    config.logdir = Cmd.get('logdir');
-}
-// check for default configuration
-if (!config.database)
-    config.database = database;
-if (!config.driverFilename)
-    config.driverFilename = path.join(__dirname, 'Drivers.ini');
-if (!config.networkFilename)
-    config.networkFilename = path.join(__dirname, 'Network.csv');
-if (!config.iccFilename)
-    config.iccFilename = path.join(__dirname, 'ICC.ini');
-if (!config.logdir)
-    config.logdir = path.join(__dirname, 'logs');
-if (!config.msgRefFilename)
-    config.msgRefFilename = path.join(__dirname, 'msgref.json');
-if (!config.secret) {
-    config.secret = hashgen();
-    console.log('Using secret: %s', config.secret);
-}
-if (!config.security) config.security = {};
-if (!config.security.username) {
-    config.security.username = 'admin';
-    console.log('Web interface username using default: %s', config.security.username);
-}
-if (!config.security.password) {
-    config.security.password = hashgen();
-    console.log('Web interface password generated: %s', config.security.password);
-}
-if (!config.database.logging) {
-    const dblogger = new ntLogger(path.join(config.logdir, 'db.log'));
-    config.database.logging = function() {
-        dblogger.log.apply(dblogger, Array.from(arguments));
+
+class App {
+
+    config = {}
+    term = null
+
+    initialize() {
+        let filename;
+        // read configuration from command line values
+        if (Cmd.get('config') && fs.existsSync(Cmd.get('config'))) {
+            filename = Cmd.get('config');
+        } else if (fs.existsSync(path.join(__dirname, 'config.json'))) {
+            filename = path.join(__dirname, 'config.json');
+        }
+        if (filename) {
+            console.log('Reading configuration %s', filename);
+            this.config = JSON.parse(fs.readFileSync(filename));
+        }
+        if (Cmd.get('driver') && fs.existsSync(Cmd.get('driver'))) {
+            this.config.driverFilename = Cmd.get('driver');
+        }
+        if (Cmd.get('logdir') && fs.existsSync(Cmd.get('logdir'))) {
+            this.config.logdir = Cmd.get('logdir');
+        }
+        // check for default configuration
+        if (!this.config.database)
+            this.config.database = database;
+        if (!this.config.driverFilename)
+            this.config.driverFilename = path.join(__dirname, 'Drivers.ini');
+        if (!this.config.networkFilename)
+            this.config.networkFilename = path.join(__dirname, 'Network.csv');
+        if (!this.config.iccFilename)
+            this.config.iccFilename = path.join(__dirname, 'ICC.ini');
+        if (!this.config.logdir)
+            this.config.logdir = path.join(__dirname, 'logs');
+        if (!this.config.msgRefFilename)
+            this.config.msgRefFilename = path.join(__dirname, 'msgref.json');
+        if (!this.config.secret) {
+            this.config.secret = this.hashgen();
+            console.log('Using secret: %s', this.config.secret);
+        }
+        if (!this.config.security) this.config.security = {};
+        if (!this.config.security.username) {
+            this.config.security.username = 'admin';
+            console.log('Web interface username using default: %s', this.config.security.username);
+        }
+        if (!this.config.security.password) {
+            this.config.security.password = this.hashgen();
+            console.log('Web interface password generated: %s', this.config.security.password);
+        }
+        if (!this.config.database.logging) {
+            const dblogger = new ntLogger(path.join(this.config.logdir, 'db.log'));
+            this.config.database.logging = (...args) => {
+                dblogger.log.apply(dblogger, args);
+            }
+        }
+        this.config.logUssd = Cmd.get('log-ussd') ? true : false;
+        this.config.readNewMessage = Cmd.get('read-new-message') ? true : false;
+        return true;
     }
-}
-config.logUssd = Cmd.get('log-ussd') ? true : false;
-config.readNewMessage = Cmd.get('read-new-message') ? true : false;
 
-AppTerm.init(config)
-    .then(() => {
-        run();
-    })
-    .catch((err) => {
-        if (err instanceof Error) {
-            console.log('%s: %s', err.name, err.message);
-        } else {
-            console.log(err);
-        }
-    })
-;
+    hashgen() {
+        const shasum = crypto.createHash('sha1');
+        shasum.update(ntUtil.formatDate(new Date(), 'yyyyMMddHHmmsszzz') + (Math.random() * 1000000).toString());
+        return shasum.digest('hex').substr(0, 8);
+    }
 
-function run() {
-    const ports = Object.keys(AppTerm.ports);
-    console.log('Available ports: %s', ports.join(', '));
-    console.log('Available drivers:');
-    AppTerm.Pool.Driver.names().forEach((drv) => {
-        console.log('- %s', AppTerm.Pool.Driver.get(drv).desc);
-    });
-    console.log('\n');
-    if (ports.length) {
-        const port = Cmd.get('port') | 8000;
-        const app = require('./ui/app');
-        const http = require('http').Server(app);
-        const io = require('socket.io')(http);
-        AppTerm.setSocketIo(io);
-        app.title = 'SMS Terminal';
-        app.term = app.locals.term = AppTerm;
-        app.authenticate = (username, password) => {
-            return username == config.security.username && password == config.security.password ?
-                true : false;
-        }
-        http.listen(port, () => {
-            console.log('Application ready on port %s...', port);
+    createTerm(callback) {
+        this.term = require('./term');
+        this.term.init(this.config)
+            .then(() => {
+                callback();
+            })
+            .catch((err) => {
+                if (err instanceof Error) {
+                    console.log('%s: %s', err.name, err.message);
+                } else {
+                    console.log(err);
+                }
+            })
+        ;
+    }
+
+    startTerm() {
+        const ports = Object.keys(this.term.ports);
+        console.log('Available ports: %s', ports.join(', '));
+        console.log('Available drivers:');
+        this.term.Pool.Driver.names().forEach((drv) => {
+            console.log('- %s', this.term.Pool.Driver.get(drv).desc);
         });
-        if (Cmd.get('auto')) {
-            AppTerm.detectAll().catch((err) => {
-                console.log('Detection error: %s', err);
+        console.log('');
+        if (ports.length) {
+            const port = Cmd.get('port') || 8000;
+            const app = require('./ui/app');
+            const http = require('http').Server(app);
+            const io = require('socket.io')(http);
+            this.term.setSocketIo(io);
+            app.title = 'SMS Terminal';
+            app.term = app.locals.term = this.term;
+            app.authenticate = (username, password) => {
+                return username == this.config.security.username && password == this.config.security.password ?
+                    true : false;
+            }
+            http.listen(port, () => {
+                console.log('Application ready on port %s...', port);
+            });
+            if (Cmd.get('auto')) {
+                this.term.detectAll().catch((err) => {
+                    console.log('Detection error: %s', err);
+                });
+            }
+        }
+    }
+
+    run() {
+        if (this.initialize()) {
+            this.createTerm(() => {
+                this.startTerm();
             });
         }
     }
+
 }
 
-function hashgen() {
-    const shasum = crypto.createHash('sha1');
-    shasum.update(ntUtil.formatDate(new Date(), 'yyyyMMddHHmmsszzz') + (Math.random() * 1000000).toString());
-    return shasum.digest('hex').substr(0, 8);
-}
+(function run() {
+    new App().run();
+})();
 
 function usage() {
     console.log('Usage:');
