@@ -149,7 +149,13 @@ class App {
             const port = Cmd.get('port') || 8000;
             const app = require('./ui/app');
             const http = require('http').Server(app);
-            const io = require('socket.io')(http);
+            const opts = {};
+            if (this.config.cors) {
+                opts.cors = this.config.cors;
+            } else {
+                opts.cors = {origin: '*'};
+            }
+            const io = require('socket.io')(http, opts);
             this.term.setSocketIo(io);
             app.title = 'SMS Terminal';
             app.term = app.locals.term = this.term;
