@@ -6,6 +6,9 @@
   "author": "Toha <tohenk@yahoo.com>",
   "license": "MIT",
   "dependencies": {
+    "@ntlab/express-middleware": "^1.0.0",
+    "@ntlab/ntjs": "^1.0.0",
+    "@ntlab/ntjs-assets": "^1.0.0",
     "@ntlab/ntlib": "^1.0.1",
     "debug": "^3.2.7",
     "ejs": "^2.7.4",

@@ -1,6 +1,0 @@
-[submodule "ui/lib"]
-	path = ui/lib
-	url = https://github.com/tohenk/node-express-middleware.git
-[submodule "ui/public/js"]
-	path = ui/public/js
-	url = https://github.com/tohenk/ntjs-web-assets.git

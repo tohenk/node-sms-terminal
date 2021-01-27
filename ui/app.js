@@ -4,6 +4,7 @@ const path = require('path');
 const logger = require('morgan');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
+const { Helper, Security } = require('@ntlab/express-middleware');
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({extended: false}));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(require('@ntlab/ntjs-assets')));
 
 // session
 app.use(session({
@@ -30,12 +32,12 @@ app.use(session({
 );
 
 // security
-app.use(require('./lib/security/security')());
+app.use(Security.core());
 
 // app helpers
-app.use(require('./lib/helper/core')());
-app.use(require('./lib/helper/menu')());
-app.use(require('./lib/helper/pager')());
+app.use(Helper.core());
+app.use(Helper.menu());
+app.use(Helper.pager());
 
 // routes
 app.use('/', require('./routes/index'));
@@ -57,7 +59,7 @@ app.use(function(err, req, res, next) {
   res.render('error/error');
 });
 
-const { ScriptManager, ScriptAsset } = require('./lib/script');
+const { ScriptManager, ScriptAsset } = require('@ntlab/ntjs');
 ScriptManager.addDefault('SemanticUI');
 ScriptManager.addAsset(ScriptAsset.STYLESHEET, 'app.css');
 
