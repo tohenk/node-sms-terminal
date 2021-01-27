@@ -1,6 +1,6 @@
 {
   "name": "@ntlab/sms-terminal",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "SMS Terminal",
   "main": "app.js",
   "scripts": {
