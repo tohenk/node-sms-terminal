@@ -67,6 +67,8 @@ class App {
         // read configuration from command line values
         if (Cmd.get('config') && fs.existsSync(Cmd.get('config'))) {
             filename = Cmd.get('config');
+        } else if (fs.existsSync(path.join(process.cwd(), 'config.json'))) {
+            filename = path.join(process.cwd(), 'config.json');
         } else if (fs.existsSync(path.join(__dirname, 'config.json'))) {
             filename = path.join(__dirname, 'config.json');
         }
@@ -80,6 +82,7 @@ class App {
         if (Cmd.get('logdir') && fs.existsSync(Cmd.get('logdir'))) {
             this.config.logdir = Cmd.get('logdir');
         }
+        let workdir = this.config.workdir ? this.config.workdir : __dirname;
         // check for default configuration
         if (!this.config.database)
             this.config.database = database;
@@ -89,10 +92,12 @@ class App {
             this.config.networkFilename = path.join(__dirname, 'Network.csv');
         if (!this.config.iccFilename)
             this.config.iccFilename = path.join(__dirname, 'ICC.ini');
+        if (!this.config.sessiondir)
+            this.config.sessiondir = path.join(workdir, 'sessions');
         if (!this.config.logdir)
-            this.config.logdir = path.join(__dirname, 'logs');
+            this.config.logdir = path.join(workdir, 'logs');
         if (!this.config.msgRefFilename)
-            this.config.msgRefFilename = path.join(__dirname, 'msgref.json');
+            this.config.msgRefFilename = path.join(workdir, 'msgref.json');
         if (!this.config.secret) {
             this.config.secret = this.hashgen();
             console.log('Using secret: %s', this.config.secret);
@@ -149,7 +154,7 @@ class App {
         console.log('');
         if (ports.length) {
             const port = Cmd.get('port') || 8000;
-            const app = require('./ui/app');
+            const app = require('./ui/app')(this.config);
             const http = require('http').Server(app);
             const opts = {};
             if (this.config.cors) {
