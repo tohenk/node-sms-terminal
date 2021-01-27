@@ -41,8 +41,7 @@ class ntAtModem extends EventEmitter {
         super();
         this.config = config;
         this.name = name;
-        this.logdir = this.getConfig('logdir',
-            fs.realpathSync(path.join(__dirname, '..', 'logs')));
+        this.logdir = this.getConfig('logdir', path.join(__dirname, '..', 'logs'));
         this.logfile = path.join(this.logdir, this.name + '.log');
         this.logger = new ntLogger(this.logfile);
         this.responses = [];
@@ -489,4 +488,4 @@ class ntAtResponse {
 module.exports = {
     ntAtModem: ntAtModem,
     ntAtResponse: ntAtResponse,
-};
+}

@@ -1089,4 +1089,4 @@ module.exports = {
     ntAtSms: sms,
     ntAtSmsMessage: ntAtSmsMessage,
     ntAtSmsStatusReport: ntAtSmsStatusReport,
-};
+}
