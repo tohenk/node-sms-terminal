@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-const CharSequence  = require('./../lib/charseq');
+const CharSequence  = require('@ntlab/ntlib/charseq');
 
 const BIT_0         = 0x01;
 const BIT_1         = 0x02;

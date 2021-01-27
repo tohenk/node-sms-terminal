@@ -27,7 +27,7 @@
  */
 
 const path          = require('path');
-const Cmd           = require('./lib/cmd');
+const Cmd           = require('@ntlab/ntlib/cmd');
 
 Cmd.addBool('help', 'h', 'Show program usage').setAccessible(false);
 Cmd.addVar('config', '', 'Read app configuration from file', 'config-file');
@@ -44,8 +44,8 @@ if (!Cmd.parse() || (Cmd.get('help') && usage())) {
 
 const crypto        = require('crypto');
 const fs            = require('fs');
-const ntUtil        = require('./lib/util');
-const ntLogger      = require('./lib/logger');
+const ntUtil        = require('@ntlab/ntlib/util');
+const ntLogger      = require('@ntlab/ntlib/logger');
 
 const database = {
     dialect: 'mysql',

@@ -26,13 +26,13 @@ const crypto        = require('crypto');
 const fs            = require('fs');
 const util          = require('util');
 const moment        = require('moment');
+const ntQueue       = require('@ntlab/ntlib/queue');
+const ntWork        = require('@ntlab/ntlib/work');
 const ntAtConst     = require('./at-const');
 const { ntAtDriverConstants } = require('./at-driver');
 const { ntAtModem, ntAtResponse } = require('./at-modem');
 const { ntAtProcessor, ntAtProcessorData } = require('./at-processor');
 const { ntAtSms, ntAtSmsMessage, ntAtSmsStatusReport } = require('./at-sms');
-const ntQueue       = require('./../lib/queue');
-const ntWork        = require('./../lib/work');
 
 let msgref = 0;
 

@@ -22,11 +22,11 @@
  * SOFTWARE.
  */
 
+const ntToken       = require('@ntlab/ntlib/token');
 const { ntAtDriverConstants } = require('./at-driver');
 const { ntAtModem } = require('./at-modem');
 const { ntAtSms }   = require('./at-sms');
 const ntAtNetwork   = require('./at-network');
-const ntToken       = require('./../lib/token');
 
 /**
  * AT GSM response processor.

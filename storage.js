@@ -24,8 +24,8 @@
 
 const path          = require('path');
 const Sequelize     = require('sequelize');
+const ntQueue       = require('@ntlab/ntlib/queue');
 const { ntAtSms }   = require('./at/at-sms');
-const ntQueue       = require('./lib/queue');
 
 /**
  * App storage.

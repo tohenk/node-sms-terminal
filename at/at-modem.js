@@ -26,11 +26,11 @@ const fs            = require('fs');
 const path          = require('path');
 const EventEmitter  = require('events');
 const util          = require('util');
+const ntQueue       = require('@ntlab/ntlib/queue');
+const ntWork        = require('@ntlab/ntlib/work');
+const ntUtil        = require('@ntlab/ntlib/util');
+const ntLogger      = require('@ntlab/ntlib/logger');
 const { ntAtDriver, ntAtDriverConstants } = require('./at-driver');
-const ntQueue       = require('./../lib/queue');
-const ntWork        = require('./../lib/work');
-const ntUtil        = require('./../lib/util');
-const ntLogger      = require('./../lib/logger');
 
 /**
  * AT modem handles AT commands with underlying stream.

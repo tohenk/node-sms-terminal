@@ -22,9 +22,9 @@
  * SOFTWARE.
  */
 
+const ntWork         = require('@ntlab/ntlib/work');
 const { ntAtDriver } = require('./at-driver');
 const ntAtGsm        = require('./at-gsm');
-const ntWork         = require('./../lib/work');
 
 /**
  * AT modems pool.

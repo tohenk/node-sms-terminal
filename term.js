@@ -28,11 +28,11 @@ const csv           = require('fast-csv');
 const ini           = require('ini');
 const util          = require('util');
 const SerialPort    = require('serialport');
+const ntLogger      = require('@ntlab/ntlib/logger');
+const ntWork        = require('@ntlab/ntlib/work');
+const ntQueue       = require('@ntlab/ntlib/queue');
 const AtConst       = require('./at/at-const');
 const AtPool        = require('./at/at-pool');
-const ntLogger      = require('./lib/logger');
-const ntWork        = require('./lib/work');
-const ntQueue       = require('./lib/queue');
 const AppStorage    = require('./storage');
 
 /**
