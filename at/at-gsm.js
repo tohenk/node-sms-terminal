@@ -505,9 +505,14 @@ class ntAtGsm extends ntAtModem {
             let nextRef = result;
             nextRef++;
             if (nextRef > 255) nextRef = 0;
-            fs.writeFileSync(this.msgRefFilename, JSON.stringify({
-                msgref: nextRef
-            }));
+            try {
+                fs.writeFileSync(this.msgRefFilename, JSON.stringify({
+                    msgref: nextRef
+                }));
+            }
+            catch (e) {
+                console.log(e);
+            }
         } else {
             result = msgref;
             msgref++;
