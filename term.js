@@ -101,13 +101,18 @@ class AppTerm {
     listPorts() {
         return new Promise((resolve, reject) => {
             this.ports = {};
-            SerialPort.list((error, ports) => {
-                ports.forEach((item) => {
-                    const portName = path.basename(item.comName);
-                    this.ports[portName] = item.comName;
-                });
-                resolve();
-            });
+            SerialPort.list()
+                .then((ports, err) => {
+                    if (err) {
+                        return reject(err);
+                    }
+                    ports.forEach((item) => {
+                        const portName = path.basename(item.path);
+                        this.ports[portName] = item.path;
+                    });
+                    resolve();
+                })
+            ;
         });
     }
 
