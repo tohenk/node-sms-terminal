@@ -75,7 +75,7 @@ router.get('/about', function(req, res, next) {
   res.json({
     title: packageInfo.description,
     version: packageInfo.version,
-    author: packageInfo.author,
+    author: packageInfo.author.name ? packageInfo.author.name + ' <' + packageInfo.author.email + '>' : packageInfo.author,
     license: packageInfo.license
   });
 });
