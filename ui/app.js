@@ -6,6 +6,7 @@ const session = require('express-session');
 const FileStore = require('session-file-store')(session);
 const { Helper, Security } = require('@ntlab/express-middleware');
 const { ScriptManager, ScriptAsset } = require('@ntlab/ntjs');
+const { Assets, CDN } = require('@ntlab/ntjs-assets');
 
 class ExpressApp {
 
@@ -22,7 +23,7 @@ class ExpressApp {
         this.app.use(express.json());
         this.app.use(express.urlencoded({extended: false}));
         this.app.use(express.static(path.join(__dirname, 'public')));
-        this.app.use(express.static(require('@ntlab/ntjs-assets')));
+        this.app.use(express.static(Assets));
 
         // session
         let sessiondir = options.sessiondir || path.join(__dirname, '..', 'sessions');
@@ -68,6 +69,10 @@ class ExpressApp {
 
         ScriptManager.addDefault('SemanticUI');
         ScriptManager.addAsset(ScriptAsset.STYLESHEET, 'app.css');
+        let useCdn = options.useCdn || false;
+        if (useCdn) {
+            ScriptManager.parseCdn(CDN);
+        }
 
         // relative from layout
         this.app.slots = {
