@@ -73,6 +73,7 @@ class App {
             filename = path.join(__dirname, 'config.json');
         }
         if (filename) {
+            filename = fs.realpathSync(filename);
             console.log('Reading configuration %s', filename);
             this.config = JSON.parse(fs.readFileSync(filename));
         }
