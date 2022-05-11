@@ -1,9 +1,0 @@
-<%- jsloader({css: stylesheets(), js: javascripts()}) %>
-<%- content %>
-<%_ if((scriptContent = scripts()).length) { -%>
-<script type="text/javascript">
-//<![CDATA[
-  <%- scriptContent %>
-//]]>
-</script>
-<%_ } -%>

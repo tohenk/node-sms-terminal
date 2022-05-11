@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2018-2020 Toha <tohenk@yahoo.com>
+ * Copyright (c) 2018-2022 Toha <tohenk@yahoo.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,10 +22,10 @@
  * SOFTWARE.
  */
 
-const path          = require('path');
-const Sequelize     = require('sequelize');
-const ntQueue       = require('@ntlab/ntlib/queue');
-const { ntAtSms }   = require('./at/at-sms');
+const path = require('path');
+const Sequelize = require('sequelize');
+const Queue = require('@ntlab/work/queue');
+const { AtSms } = require('@ntlab/gsm-at/at-sms');
 
 /**
  * App storage.
@@ -50,7 +50,7 @@ class AppStorage {
             this.PduReport = require('./model/PduReport')(this.db);
             this.db.authenticate()
                 .then(() => resolve())
-                .catch((err) => reject(err))
+                .catch(err => reject(err))
             ;
         });
     }
@@ -63,14 +63,14 @@ class AppStorage {
             address: activity.address
         }
         this.Activity.count({where: condition})
-            .then((count) => {
+            .then(count => {
                 if (0 == count) {
                     if (!activity.imsi) activity.imsi = origin;
                     if (!activity.status) activity.status = 0;
                     if (!activity.time) activity.time = new Date();
                     if (typeof activity.data == 'string' && activity.data.length == 0) activity.data = null;
                     this.Activity.create(activity)
-                        .then((result) => {
+                        .then(result => {
                             if (typeof done == 'function') {
                                 done(result);
                             }
@@ -78,7 +78,7 @@ class AppStorage {
                     ;
                 } else {
                     this.Activity.findOne({where: condition})
-                        .then((result) => {
+                        .then(result => {
                             if (typeof activity.status != 'undefined' && result.status != activity.status) {
                                 result.update({status: activity.status});
                             }
@@ -97,7 +97,7 @@ class AppStorage {
             conditions.mr = mr;
         }
         this.Pdu.count({where: conditions})
-            .then((count) => {
+            .then(count => {
                 if (count == 0) {
                     this.Pdu.create({
                             hash: msg.hash,
@@ -108,7 +108,7 @@ class AppStorage {
                             mr: mr,
                             time: new Date()
                         })
-                        .then((pdu) => {
+                        .then(pdu => {
                             if (typeof done == 'function') {
                                 done(pdu);
                             }
@@ -121,7 +121,7 @@ class AppStorage {
 
     saveReport(origin, msg, done) {
         this.PduReport.count({where: {imsi: origin, pdu: msg.pdu}})
-            .then((count) => {
+            .then(count => {
                 if (count == 0) {
                     return this.PduReport.create({
                         imsi: origin,
@@ -140,21 +140,22 @@ class AppStorage {
     updateReport(origin, report, update, done) {
         let msg;
         if (report instanceof this.PduReport) {
-            msg = ntAtSms.decode(report.pdu);
+            msg = AtSms.decode(report.pdu);
         } else {
             msg = report;
         }
         this.Pdu.findAll({
             where: {imsi: origin, address: msg.address, dir: this.DIR_OUT, mr: msg.messageReference},
             order: [['time', 'DESC']]
-        }).then((results) => {
+        })
+        .then(results => {
             const status = {
                 code: msg.status,
                 sent: msg.sentTime,
                 received: msg.dischargeTime
             }
             let hash;
-            const q = new ntQueue(results, (Pdu) => {
+            const q = new Queue(results, Pdu => {
                 let matched = results.length == 1;
                 if (!matched) {
                     let seconds = Math.abs(Math.floor((msg.sentTime - Pdu.time) / 1000));
@@ -188,9 +189,9 @@ class AppStorage {
 
     findPdu(origin, hash, done) {
         this.PduReport.findAll({where: {imsi: origin}, order: [['time', 'DESC']]})
-            .then((results) => {
-                const q = new ntQueue(results, (report) => {
-                    this.updateReport(origin, report, false, (status) => {
+            .then(results => {
+                const q = new Queue(results, report => {
+                    this.updateReport(origin, report, false, status => {
                         if (status.hash == hash) {
                             if (typeof done == 'function') {
                                 done(status);

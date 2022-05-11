@@ -1,9 +1,0 @@
-<% script.create('JQuery')
-  .useDependencies(['JQuery/Util', 'SemanticUI/Dialog/Message'])
-  .addMiddle(`
-$.errhandler.register(500, function() {
-    var dlgId = 'err500';
-    if ($.ntdlg.isVisible(dlgId)) return;
-    $.ntdlg.message(dlgId, 'Error', 'Oops! An Error Occurred, please try again later.<br/>Don\\\'t hesitate to contact us if the problem persist.', $.ntdlg.ICON_ERROR);
-});
-`); %>

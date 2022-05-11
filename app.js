@@ -3,7 +3,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2018-2020 Toha <tohenk@yahoo.com>
+ * Copyright (c) 2018-2022 Toha <tohenk@yahoo.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -28,8 +28,13 @@
  * Main App handler.
  */
 
-const path          = require('path');
-const Cmd           = require('@ntlab/ntlib/cmd');
+const fs = require('fs');
+const path = require('path');
+const Cmd = require('@ntlab/ntlib/cmd');
+const Logger = require('@ntlab/ntlib/logger');
+const { AtDriverIni } = require('@ntlab/gsm-at');
+const { Work } = require('@ntlab/work');
+
 
 Cmd.addBool('help', 'h', 'Show program usage').setAccessible(false);
 Cmd.addVar('config', '', 'Read app configuration from file', 'config-file');
@@ -43,11 +48,6 @@ Cmd.addBool('log-ussd', 'u', 'Add ussd command to activity');
 if (!Cmd.parse() || (Cmd.get('help') && usage())) {
     process.exit();
 }
-
-const crypto        = require('crypto');
-const fs            = require('fs');
-const ntUtil        = require('@ntlab/ntlib/util');
-const ntLogger      = require('@ntlab/ntlib/logger');
 
 const database = {
     dialect: 'mysql',
@@ -88,7 +88,7 @@ class App {
         if (!this.config.database)
             this.config.database = database;
         if (!this.config.driverFilename)
-            this.config.driverFilename = path.join(__dirname, 'Drivers.ini');
+            this.config.driverFilename = AtDriverIni;
         if (!this.config.networkFilename)
             this.config.networkFilename = path.join(__dirname, 'Network.csv');
         if (!this.config.iccFilename)
@@ -113,10 +113,13 @@ class App {
             console.log('Web interface password generated: %s', this.config.security.password);
         }
         if (!this.config.database.logging) {
-            const dblogger = new ntLogger(path.join(this.config.logdir, 'db.log'));
+            const dblogger = new Logger(path.join(this.config.logdir, 'db.log'));
             this.config.database.logging = (...args) => {
                 dblogger.log.apply(dblogger, args);
             }
+        }
+        if (!this.config.ui) {
+            this.config.ui = '@ntlab/sms-terminal-ui';
         }
         this.config.logUssd = Cmd.get('log-ussd') ? true : false;
         this.config.readNewMessage = Cmd.get('read-new-message') ? true : false;
@@ -124,69 +127,86 @@ class App {
     }
 
     hashgen() {
+        const crypto = require('crypto');
         const shasum = crypto.createHash('sha1');
-        shasum.update(ntUtil.formatDate(new Date(), 'yyyyMMddHHmmsszzz') + (Math.random() * 1000000).toString());
+        shasum.update(new Date().toISOString() + (Math.random() * 1000000).toString());
         return shasum.digest('hex').substr(0, 8);
     }
 
-    createTerm(callback) {
+    createTerm() {
         this.term = require('./term');
-        this.term.init(this.config)
-            .then(() => {
-                callback();
-            })
-            .catch((err) => {
-                if (err instanceof Error) {
-                    console.log('%s: %s', err.name, err.message);
-                } else {
-                    console.log(err);
-                }
-            })
-        ;
+        return this.term.init(this.config);
+    }
+
+    listTerm() {
+        return new Promise((resolve, reject) => {
+            const ports = Object.keys(this.term.ports);
+            console.log('Available ports: %s', ports.join(', '));
+            console.log('Available drivers:');
+            this.term.Pool.Driver.names().forEach(drv => {
+                console.log('- %s', this.term.Pool.Driver.get(drv).desc);
+            });
+            resolve();
+        });
+    }
+
+    createUI() {
+        return new Promise((resolve, reject) => {
+            try {
+                this.ui = require(this.config.ui)(this.config);
+            } catch (err) {
+                console.error('Web interface not available: ' + this.config.ui);
+            }
+            resolve();
+        });
     }
 
     startTerm() {
-        const ports = Object.keys(this.term.ports);
-        console.log('Available ports: %s', ports.join(', '));
-        console.log('Available drivers:');
-        this.term.Pool.Driver.names().forEach((drv) => {
-            console.log('- %s', this.term.Pool.Driver.get(drv).desc);
-        });
-        console.log('');
-        if (ports.length) {
-            const port = Cmd.get('port') || 8000;
-            const app = require('./ui/app')(this.config);
-            const http = require('http').Server(app);
+        return new Promise((resolve, reject) => {
+            // create server
+            const server = require('http').Server(this.ui ? this.ui : {});
+            // create socket.io server
             const opts = {};
             if (this.config.cors) {
                 opts.cors = this.config.cors;
             } else {
                 opts.cors = {origin: '*'};
             }
-            const io = require('socket.io')(http, opts);
+            const { Server } = require('socket.io');
+            const io = new Server(server, opts);
             this.term.setSocketIo(io);
-            app.title = 'SMS Terminal';
-            app.term = app.locals.term = this.term;
-            app.authenticate = (username, password) => {
-                return username == this.config.security.username && password == this.config.security.password ?
-                    true : false;
+            // configure ui
+            if (this.ui) {
+                this.ui.title = 'SMS Terminal';
+                this.ui.term = this.ui.locals.term = this.term;
+                this.ui.authenticate = (username, password) => {
+                    return username == this.config.security.username && password == this.config.security.password ?
+                        true : false;
+                }
             }
-            http.listen(port, () => {
+            // start server
+            const port = Cmd.get('port') || 8000;
+            server.listen(port, () => {
                 console.log('Application ready on port %s...', port);
             });
+            // auto detect
             if (Cmd.get('auto')) {
-                this.term.detectAll().catch((err) => {
-                    console.log('Detection error: %s', err);
+                this.term.detectAll().catch(err => {
+                    console.error('Detection error: %s', err);
                 });
             }
-        }
+            resolve();
+        });
     }
 
     run() {
         if (this.initialize()) {
-            this.createTerm(() => {
-                this.startTerm();
-            });
+            Work.works([
+                [w => this.createTerm()],
+                [w => this.listTerm()],
+                [w => this.createUI()],
+                [w => this.startTerm(), w => Object.keys(this.term.ports).length],
+            ]);
         }
     }
 

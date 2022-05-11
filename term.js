@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2018-2020 Toha <tohenk@yahoo.com>
+ * Copyright (c) 2018-2022 Toha <tohenk@yahoo.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,17 +22,15 @@
  * SOFTWARE.
  */
 
-const fs            = require('fs');
-const path          = require('path');
-const csv           = require('fast-csv');
-const ini           = require('ini');
-const util          = require('util');
-const SerialPort    = require('serialport');
-const ntLogger      = require('@ntlab/ntlib/logger');
-const ntWork        = require('@ntlab/ntlib/work');
-const ntQueue       = require('@ntlab/ntlib/queue');
-const AtConst       = require('./at/at-const');
-const AtPool        = require('./at/at-pool');
+const fs = require('fs');
+const path = require('path');
+const csv = require('fast-csv');
+const ini = require('ini');
+const util = require('util');
+const { SerialPort } = require('serialport');
+const Logger = require('@ntlab/ntlib/logger');
+const { Queue, Work } = require('@ntlab/work');
+const { AtPool, AtConst } = require('@ntlab/gsm-at');
 const AppStorage    = require('./storage');
 
 /**
@@ -57,13 +55,13 @@ class AppTerm {
             requestReply: 'requestMessageReply',
             emptyWhenFull: 'emptyWhenFull'
         };
-        return ntWork.works([
-            () => this.initializeLogger(),
-            () => this.loadNetworks(),
-            () => this.loadICC(),
-            () => this.initializePool(),
-            () => this.listPorts(),
-            () => this.Storage.init(config.database),
+        return Work.works([
+            w => this.initializeLogger(),
+            w => this.loadNetworks(),
+            w => this.loadICC(),
+            w => this.initializePool(),
+            w => this.listPorts(),
+            w => this.Storage.init(config.database),
         ]);
     }
 
@@ -71,7 +69,7 @@ class AppTerm {
         return new Promise((resolve, reject) => {
             this.logdir = this.config.logdir || path.join(__dirname, 'logs');
             this.logfile = path.join(this.logdir, 'activity.log');
-            this.logger = new ntLogger(this.logfile);
+            this.logger = new Logger(this.logfile);
             resolve();
         });
     }
@@ -79,11 +77,11 @@ class AppTerm {
     initializePool() {
         return new Promise((resolve, reject) => {
             this.Pool.Driver.load(this.config.driverFilename);
-            this.Pool.init((portName) => {
+            this.Pool.init(portName => {
                 return new Promise((resolve, reject) => {
                     const portId = this.ports[portName];
                     if (portId) {
-                        const port = new SerialPort(portId, {baudRate: 115200}, (err) => {
+                        const port = new SerialPort(portId, {baudRate: 115200}, err => {
                             if (err) {
                                 return reject(err.message);
                             }
@@ -106,7 +104,7 @@ class AppTerm {
                     if (err) {
                         return reject(err);
                     }
-                    ports.forEach((item) => {
+                    ports.forEach(item => {
                         const portName = path.basename(item.path);
                         this.ports[portName] = item.path;
                     });
@@ -181,17 +179,17 @@ class AppTerm {
 
     open(portName) {
         let gsm;
-        return ntWork.works([
-            () => new Promise((resolve, reject) => {
+        return Work.works([
+            w => new Promise((resolve, reject) => {
                 this.Pool.open(portName)
-                    .then((xgsm) => {
+                    .then(xgsm => {
                         gsm = this.applyHandler(xgsm);
                         resolve();
                     })
-                    .catch((err) => reject(err))
+                    .catch(err => reject(err))
                 ;
             }),
-            () => new Promise((resolve, reject) => {
+            w => new Promise((resolve, reject) => {
                 if (!this.config.readNewMessage) return resolve();
                 gsm.listMessage(AtConst.SMS_STAT_RECV_UNREAD)
                     .then(() => resolve())
@@ -205,7 +203,7 @@ class AppTerm {
         if (!gsm.initialized) {
             gsm.initialized = true;
             gsm.msgRefFilename = this.msgRefFilename;
-            const done = (activity) => {
+            const done = activity => {
                 if (this.uiCon) {
                     this.uiCon.emit('new-activity', activity.type);
                 }
@@ -217,7 +215,7 @@ class AppTerm {
                 let hash = null;
                 let address = null;
                 let content = '';
-                messages.forEach((message) => {
+                messages.forEach(message => {
                     if (null == hash) hash = message.hash;
                     if (null == address) address = message.address;
                     content += message.message;
@@ -258,7 +256,7 @@ class AppTerm {
                 }
             });
             // ---- INCOMING ----
-            gsm.on('status-report', (msg) => {
+            gsm.on('status-report', msg => {
                 this.log('%s <-- Status report: %s', gsm.name, msg.address);
                 this.Storage.saveReport(gsm.info.imsi, msg, (report) => {
                     if (this.termCon) {
@@ -266,7 +264,7 @@ class AppTerm {
                     }
                 });
             });
-            gsm.on('message', (messages) => {
+            gsm.on('message', messages => {
                 messages = Array.isArray(messages) ? messages : [messages];
                 let hash = null;
                 let address = null;
@@ -289,7 +287,7 @@ class AppTerm {
                     }, done);
                 }
             });
-            gsm.on('ussd', (ussd) => {
+            gsm.on('ussd', ussd => {
                 if (ussd.message) {
                     this.log('%s <-- USSD: %s', gsm.name, ussd.message);
                     // save as CUSD activity
@@ -302,7 +300,7 @@ class AppTerm {
                     }, done);
                 }
             });
-            gsm.on('ring', (caller) => {
+            gsm.on('ring', caller => {
                 this.log('%s <-- CALL: %s', gsm.name, caller);
                 // save as RING activity
                 this.Storage.saveActivity(gsm.info.imsi, {
@@ -313,14 +311,14 @@ class AppTerm {
                     status: this.clients.length ? 1 : 0
                 }, done);
             });
-            gsm.on('log', (message) => {
+            gsm.on('log', message => {
                 if (this.uiCon) {
                     this.uiCon.emit('log', {term: gsm.name, time: Date.now(), message: message});
                 }
             });
             if (gsm.info.imsi && this.io) {
                 gsm.io = this.io.of('/' + gsm.info.imsi);
-                gsm.io.on('connection', (socket) => {
+                gsm.io.on('connection', socket => {
                     console.log('IMSI connected: %s', socket.id);
                     socket.on('disconnect', () => {
                         console.log('IMSI disconnected: %s', socket.id);
@@ -336,8 +334,8 @@ class AppTerm {
                             network: gsm.props.network
                         });
                     });
-                    socket.on('setopt', (opts) => {
-                        Object.keys(this.optionsMap).forEach((opt) => {
+                    socket.on('setopt', opts => {
+                        Object.keys(this.optionsMap).forEach(opt => {
                             if (typeof opts[opt] != 'undefined') {
                                 gsm.options[this.optionsMap[opt]] = opts[opt];
                                 console.log('%s: Option %s set to %s', gsm.name, this.optionsMap[opt],
@@ -347,7 +345,7 @@ class AppTerm {
                     });
                     socket.on('getopt', () => {
                         const opts = {};
-                        Object.keys(this.optionsMap).forEach((opt) => {
+                        Object.keys(this.optionsMap).forEach(opt => {
                             if (typeof gsm.options[this.optionsMap[opt]] != 'undefined') {
                                 opts[opt] = gsm.options[this.optionsMap[opt]];
                             }
@@ -357,7 +355,7 @@ class AppTerm {
                     socket.on('state', () => {
                         socket.emit('state', {idle: gsm.idle && gsm.queueCount() == 0});
                     });
-                    socket.on('hash', (data) => {
+                    socket.on('hash', data => {
                         switch (data.type) {
                             case this.Storage.ACTIVITY_CALL:
                                 data.address = gsm.intlNumber(data.address);
@@ -373,14 +371,14 @@ class AppTerm {
                         }
                         socket.emit('hash', data);
                     });
-                    socket.on('status-report', (hash) => {
-                        this.Storage.findPdu(gsm.info.imsi, hash, (status) => {
+                    socket.on('status-report', hash => {
+                        this.Storage.findPdu(gsm.info.imsi, hash, status => {
                             socket.emit('status-report', status);
                         });
                     });
                     socket.on('status', (hash) => {
                         this.Storage.Activity.findOne({where: {imsi: gsm.info.imsi, hash: hash}})
-                            .then((Activity) => {
+                            .then(Activity => {
                                 socket.emit('status', {success: true, hash: hash, status: Activity.status});
                             })
                             .catch(() => {
@@ -388,7 +386,7 @@ class AppTerm {
                             })
                         ;
                     });
-                    socket.on('message', (data) => {
+                    socket.on('message', data => {
                         gsm.sendMessage(data.address, data.data, data.hash)
                             .then(() => {
                                 data.success = true;
@@ -400,7 +398,7 @@ class AppTerm {
                             })
                         ;
                     });
-                    socket.on('dial', (data) => {
+                    socket.on('dial', data => {
                         gsm.dial(data.address, data.hash)
                             .then(() => {
                                 data.success = true;
@@ -412,7 +410,7 @@ class AppTerm {
                             })
                         ;
                     });
-                    socket.on('ussd', (data) => {
+                    socket.on('ussd', data => {
                         gsm.ussd(data.address, data.hash)
                             .then(() => {
                                 data.success = true;
@@ -497,16 +495,16 @@ class AppTerm {
     }
 
     checkPendingActivity() {
-        Object.keys(this.ports).forEach((portName) => {
+        Object.keys(this.ports).forEach(portName => {
             const gsm = this.Pool.get(portName);
             if (gsm && gsm.info.imsi) {
                 gsm.listMessage(AtConst.SMS_STAT_RECV_UNREAD);
             }
         });
         this.Storage.getPendingActivities()
-            .then((results) => {
+            .then(results => {
                 console.log('Processing pending activity: %d', results.length);
-                const q = new ntQueue(results, (activity) => {
+                const q = new Queue(results, activity => {
                     this.notifyActivity(activity);
                     activity.update({status: 1})
                         .then(() => {
@@ -520,11 +518,11 @@ class AppTerm {
 
     checkReport(since) {
         this.Storage.getReports(since)
-            .then((results) => {
+            .then(results => {
                 console.log('Processing report: %d', results.length);
-                const q = new ntQueue(results, (report) => {
+                const q = new Queue(results, report => {
                     try {
-                        this.Storage.updateReport(report.imsi, report, false, (status) => {
+                        this.Storage.updateReport(report.imsi, report, false, status => {
                             if (status.hash) {
                                 console.log('Renotify status report: %s', status.hash);
                                 if (this.termCon) {
@@ -533,8 +531,8 @@ class AppTerm {
                             }
                             q.next();
                         });
-                    } catch (e) {
-                        console.log(e);
+                    } catch (err) {
+                        console.error(err);
                         q.next();
                     }
                 });
@@ -544,7 +542,7 @@ class AppTerm {
 
     checkMessage(type) {
         console.log('Reading messages of type %d', type);
-        Object.keys(this.ports).forEach((portName) => {
+        Object.keys(this.ports).forEach(portName => {
             const gsm = this.Pool.get(portName);
             if (gsm && gsm.info.imsi) {
                 gsm.listMessage(type);
@@ -554,25 +552,23 @@ class AppTerm {
 
     detectAll() {
         const works = [];
-        Object.keys(this.ports).forEach((portName) => {
-            works.push(() => {
-                return new Promise((resolve, reject) => {
-                    this.open(portName)
-                        .then(() => resolve())
-                        .catch((err) => {
-                            console.log(err);
-                            resolve();
-                        })
-                    ;
-                });
-            });
+        Object.keys(this.ports).forEach(portName => {
+            works.push(w => new Promise((resolve, reject) => {
+                this.open(portName)
+                    .then(() => resolve())
+                    .catch(err => {
+                        console.error(err);
+                        resolve();
+                    })
+                ;
+            }));
         });
-        return ntWork.works(works);
+        return Work.works(works);
     }
 
     getTerminals(port) {
         const terms = [];
-        Object.keys(this.ports).forEach((portName) => {
+        Object.keys(this.ports).forEach(portName => {
             const gsm = this.Pool.get(portName);
             if (gsm && gsm.info.imsi) {
                 terms.push(port ? portName : gsm.info.imsi);
@@ -595,14 +591,14 @@ class AppTerm {
     setSocketIo(io) {
         this.io = io;
         this.uiCon = this.io.of('/ui');
-        this.uiCon.on('connection', (socket) => {
+        this.uiCon.on('connection', socket => {
             console.log('UI client connected: %s', socket.id);
             socket.on('disconnect', () => {
                 console.log('UI client disconnected: %s', socket.id);
             });
         });
         this.termCon = this.io.of('/ctrl');
-        this.termCon.on('connection', (socket) => {
+        this.termCon.on('connection', socket => {
             console.log('Term client connected: %s', socket.id);
             socket.time = new Date();
             const timeout = setTimeout(() => {
@@ -618,7 +614,7 @@ class AppTerm {
                     if (this.uiCon) this.uiCon.emit('client');
                 }
             });
-            socket.on('auth', (secret) => {
+            socket.on('auth', secret => {
                 const authenticated = this.config.secret == secret;
                 if (authenticated) {
                     console.log('Client is authenticated: %s', socket.id);
@@ -637,8 +633,8 @@ class AppTerm {
                     .then(() => {
                         socket.emit('ready', this.getTerminals());
                     })
-                    .catch((err) => {
-                        console.log('Terminal initialization error: %s', err);
+                    .catch(err => {
+                        console.error('Terminal initialization error: %s', err);
                     })
                 ;
             });
@@ -646,11 +642,11 @@ class AppTerm {
                 if (this.clients.indexOf(socket) < 0) return;
                 this.checkPendingActivity();
             });
-            socket.on('check-report', (since) => {
+            socket.on('check-report', since => {
                 if (this.clients.indexOf(socket) < 0) return;
                 this.checkReport(since);
             });
-            socket.on('check-message', (type) => {
+            socket.on('check-message', type => {
                 if (this.clients.indexOf(socket) < 0) return;
                 this.checkMessage(type);
             });
