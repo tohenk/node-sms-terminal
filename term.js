@@ -81,7 +81,7 @@ class AppTerm {
                 return new Promise((resolve, reject) => {
                     const portId = this.ports[portName];
                     if (portId) {
-                        const port = new SerialPort(portId, {baudRate: 115200}, err => {
+                        const port = new SerialPort({path: portId, baudRate: 115200}, err => {
                             if (err) {
                                 return reject(err.message);
                             }
@@ -178,24 +178,11 @@ class AppTerm {
     }
 
     open(portName) {
-        let gsm;
         return Work.works([
-            w => new Promise((resolve, reject) => {
-                this.Pool.open(portName)
-                    .then(xgsm => {
-                        gsm = this.applyHandler(xgsm);
-                        resolve();
-                    })
-                    .catch(err => reject(err))
-                ;
-            }),
-            w => new Promise((resolve, reject) => {
-                if (!this.config.readNewMessage) return resolve();
-                gsm.listMessage(AtConst.SMS_STAT_RECV_UNREAD)
-                    .then(() => resolve())
-                    .catch(() => resolve())
-                ;
-            })
+            [w => this.Pool.open(portName)],
+            [w => Promise.resolve(this.applyHandler(w.getRes(0)))],
+            [w => w.getRes(1).listMessage(AtConst.SMS_STAT_RECV_UNREAD),
+                w => this.config.readNewMessage],
         ]);
     }
 
@@ -657,7 +644,7 @@ class AppTerm {
     log() {
         const args = Array.from(arguments);
         this.logger.log.apply(this.logger, args)
-            .then((message) => {
+            .then(message => {
                 if (this.uiCon) {
                     this.uiCon.emit('activity', {time: Date.now(), message: message});
                 }

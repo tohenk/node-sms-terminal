@@ -1,6 +1,6 @@
 {
   "name": "@ntlab/sms-terminal",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "SMS Terminal",
   "main": "app.js",
   "scripts": {
@@ -22,9 +22,9 @@
   },
   "homepage": "https://github.com/tohenk/node-sms-terminal#readme",
   "dependencies": {
-    "@ntlab/gsm-at": "^2.0.0",
+    "@ntlab/gsm-at": "^2.0.1",
     "@ntlab/ntlib": "^2.0.0",
-    "@ntlab/work": "^1.0.0",
+    "@ntlab/work": "^1.0.1",
     "fast-csv": "^4.3.6",
     "ini": "^3.0.0",
     "mysql2": "^2.3.3",

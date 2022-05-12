@@ -215,7 +215,6 @@ class App {
             ]);
         }
     }
-
 }
 
 (function run() {
