@@ -42,6 +42,8 @@ class AppStorage {
     ACTIVITY_USSD = 5
     ACTIVITY_CUSD = 6
 
+    Sequelize = Sequelize
+
     init(options) {
         return new Promise((resolve, reject) => {
             this.db = new Sequelize(options);

@@ -13,29 +13,21 @@ but it uses socket communication to provide those functionality to other party.
 Currently, there is [Node SMS Gateway](https://github.com/tohenk/node-sms-gateway)
 other party implementation for this terminal.
 
-## Hardware support
-
-Node SMS Terminal uses generic AT commands to support wide range of dongle
-hardwares. Here are supported dongles:
-- Sony Ericsson mobile phone
-- Siemens C-55
-- Huawai modem (tested on E173, E3372, EC1260-2)
-- ZTE modem (tested on MF190)
-- Prolink modem (tested on PHS301, still need testing)
-- Wavecom modem
-
-Support for new modem is easily achieved by providing the commands in the
-`Drivers.ini` configuration.
-
 ## Installation
 
-Installation is available via GIT.
+Stand alone installation is available using GIT.
 
 ```
 $ cd ~
 $ git clone https://github.com/tohenk/node-sms-terminal.git
 $ cd node-sms-terminal
 $ npm install
+```
+
+A web interface installation is needed as its now a separate package.
+
+```
+$ npm install @ntlab/sms-terminal-ui
 ```
 
 To run application (On some Linux distribution replace `node` with `nodejs`)
