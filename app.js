@@ -35,7 +35,6 @@ const Logger = require('@ntlab/ntlib/logger');
 const { AtDriverIni } = require('@ntlab/gsm-at');
 const { Work } = require('@ntlab/work');
 
-
 Cmd.addBool('help', 'h', 'Show program usage').setAccessible(false);
 Cmd.addVar('config', '', 'Read app configuration from file', 'config-file');
 Cmd.addVar('driver', '', 'Read driver from file', 'driver-file');
@@ -182,6 +181,13 @@ class App {
                 this.ui.authenticate = (username, password) => {
                     return username == this.config.security.username && password == this.config.security.password ?
                         true : false;
+                }
+                const packageInfo = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json')));
+                this.ui.about = {
+                    title: packageInfo.description,
+                    version: packageInfo.version,
+                    author: packageInfo.author.name ? packageInfo.author.name + ' <' + packageInfo.author.email + '>' : packageInfo.author,
+                    license: packageInfo.license
                 }
             }
             // start server
