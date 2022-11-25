@@ -1,6 +1,6 @@
 {
   "name": "@ntlab/sms-terminal",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "SMS Terminal",
   "main": "app.js",
   "scripts": {
@@ -22,15 +22,15 @@
   },
   "homepage": "https://github.com/tohenk/node-sms-terminal#readme",
   "dependencies": {
-    "@ntlab/gsm-at": "^2.0.1",
+    "@ntlab/gsm-at": "^2.0.4",
     "@ntlab/ntlib": "^2.0.0",
-    "@ntlab/work": "^1.0.1",
+    "@ntlab/work": "^1.1.2",
     "fast-csv": "^4.3.6",
-    "ini": "^3.0.0",
+    "ini": "^3.0.1",
     "mysql2": "^2.3.3",
-    "sequelize": "^6.19.0",
-    "serialport": "^10.4.0",
-    "socket.io": "^4.5.0"
+    "sequelize": "^6.25.8",
+    "serialport": "^10.5.0",
+    "socket.io": "^4.5.4"
   },
   "bin": {
     "node-sms-terminal": "app.js"
