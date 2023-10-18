@@ -3,7 +3,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2018-2022 Toha <tohenk@yahoo.com>
+ * Copyright (c) 2018-2023 Toha <tohenk@yahoo.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -28,12 +28,8 @@
  * Main App handler.
  */
 
-const fs = require('fs');
 const path = require('path');
 const Cmd = require('@ntlab/ntlib/cmd');
-const Logger = require('@ntlab/ntlib/logger');
-const { AtDriverIni } = require('@ntlab/gsm-at');
-const { Work } = require('@ntlab/work');
 
 Cmd.addBool('help', 'h', 'Show program usage').setAccessible(false);
 Cmd.addVar('config', '', 'Read app configuration from file', 'config-file');
@@ -47,6 +43,11 @@ Cmd.addBool('log-ussd', 'u', 'Add ussd command to activity');
 if (!Cmd.parse() || (Cmd.get('help') && usage())) {
     process.exit();
 }
+
+const fs = require('fs');
+const Logger = require('@ntlab/ntlib/logger');
+const { AtDriverIni } = require('@ntlab/gsm-at');
+const { Work } = require('@ntlab/work');
 
 const database = {
     dialect: 'mysql',
@@ -197,9 +198,7 @@ class App {
             });
             // auto detect
             if (Cmd.get('auto')) {
-                this.term.detectAll().catch(err => {
-                    console.error('Detection error: %s', err);
-                });
+                this.term.detectAndNotify();
             }
             resolve();
         });

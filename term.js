@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2018-2022 Toha <tohenk@yahoo.com>
+ * Copyright (c) 2018-2023 Toha <tohenk@yahoo.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -553,6 +553,27 @@ class AppTerm {
         return Work.works(works);
     }
 
+    detectAndNotify(socket) {
+        if (!this._detecting) {
+            this._detecting = true;
+            this.detectAll()
+                .then(() => {
+                    const terminals = this.getTerminals();
+                    const clients = socket ? [socket] : this.clients;
+                    clients.forEach(socket => {
+                        socket.emit('ready', terminals);
+                    });
+                })
+                .catch(err => {
+                    console.error('Terminal detection error: %s', err);
+                })
+                .finally(() => {
+                    this._detecting = false;
+                })
+            ;
+        }
+    }
+
     getTerminals(port) {
         const terms = [];
         Object.keys(this.ports).forEach(portName => {
@@ -616,14 +637,7 @@ class AppTerm {
             });
             socket.on('init', () => {
                 if (this.clients.indexOf(socket) < 0) return;
-                this.detectAll()
-                    .then(() => {
-                        socket.emit('ready', this.getTerminals());
-                    })
-                    .catch(err => {
-                        console.error('Terminal initialization error: %s', err);
-                    })
-                ;
+                this.detectAndNotify(socket);
             });
             socket.on('check-pending', () => {
                 if (this.clients.indexOf(socket) < 0) return;
