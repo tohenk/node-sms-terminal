@@ -56,12 +56,12 @@ class AppTerm {
             emptyWhenFull: 'emptyWhenFull'
         };
         return Work.works([
-            w => this.initializeLogger(),
-            w => this.loadNetworks(),
-            w => this.loadICC(),
-            w => this.initializePool(),
-            w => this.listPorts(),
-            w => this.Storage.init(config.database),
+            [w => this.initializeLogger()],
+            [w => this.loadNetworks()],
+            [w => this.loadICC()],
+            [w => this.initializePool()],
+            [w => this.listPorts()],
+            [w => this.Storage.init(config.database)],
         ]);
     }
 
@@ -144,8 +144,8 @@ class AppTerm {
 
     getICC(country) {
         if (this.icc) {
-            for (let code in this.icc.ICC) {
-                let ctry = this.icc.ICC[code];
+            for (const code in this.icc.ICC) {
+                const ctry = this.icc.ICC[code];
                 if (ctry.indexOf(country) >= 0) {
                     return this.cleanICC(code);
                 }
@@ -161,10 +161,12 @@ class AppTerm {
     splitNumber(phoneNumber) {
         const result = [];
         if (this.icc) {
-            if (phoneNumber.charAt(0) == '+') phoneNumber = phoneNumber.substr(1);
-            for (let code in this.icc.ICC) {
-                let icc = this.cleanICC(code);
-                if (phoneNumber.substr(0, icc.length) == icc) {
+            if (phoneNumber.charAt(0) === '+') {
+                phoneNumber = phoneNumber.substr(1);
+            }
+            for (const code in this.icc.ICC) {
+                const icc = this.cleanICC(code);
+                if (phoneNumber.substr(0, icc.length) === icc) {
                     result.push(icc);
                     result.push(phoneNumber.substr(icc.length));
                 }
@@ -203,8 +205,12 @@ class AppTerm {
                 let address = null;
                 let content = '';
                 messages.forEach(message => {
-                    if (null == hash) hash = message.hash;
-                    if (null == address) address = message.address;
+                    if (null === hash) {
+                        hash = message.hash;
+                    }
+                    if (null === address) {
+                        address = message.address;
+                    }
                     content += message.message;
                     this.Storage.savePdu(gsm.info.imsi, message);
                 });
@@ -257,8 +263,12 @@ class AppTerm {
                 let address = null;
                 let content = '';
                 messages.forEach((message) => {
-                    if (null == hash) hash = message.hash;
-                    if (null == address) address = message.address;
+                    if (null === hash) {
+                        hash = message.hash;
+                    }
+                    if (null === address) {
+                        address = message.address;
+                    }
                     content += message.message;
                     this.Storage.savePdu(gsm.info.imsi, message);
                 });
@@ -323,7 +333,7 @@ class AppTerm {
                     });
                     socket.on('setopt', opts => {
                         Object.keys(this.optionsMap).forEach(opt => {
-                            if (typeof opts[opt] != 'undefined') {
+                            if (opts[opt] !== undefined) {
                                 gsm.options[this.optionsMap[opt]] = opts[opt];
                                 console.log('%s: Option %s set to %s', gsm.name, this.optionsMap[opt],
                                     util.inspect(opts[opt]));
@@ -333,14 +343,14 @@ class AppTerm {
                     socket.on('getopt', () => {
                         const opts = {};
                         Object.keys(this.optionsMap).forEach(opt => {
-                            if (typeof gsm.options[this.optionsMap[opt]] != 'undefined') {
+                            if (gsm.options[this.optionsMap[opt]] !== undefined) {
                                 opts[opt] = gsm.options[this.optionsMap[opt]];
                             }
                         });
                         socket.emit('getopt', opts);
                     });
                     socket.on('state', () => {
-                        socket.emit('state', {idle: gsm.idle && gsm.queueCount() == 0});
+                        socket.emit('state', {idle: gsm.idle && gsm.queueCount() === 0});
                     });
                     socket.on('hash', data => {
                         switch (data.type) {
@@ -412,13 +422,13 @@ class AppTerm {
                 });
                 // state broadcast
                 gsm.on('state', () => {
-                    gsm.io.emit('state', {idle: gsm.idle && gsm.queueCount() == 0});
+                    gsm.io.emit('state', {idle: gsm.idle && gsm.queueCount() === 0});
                 });
             }
             let icc;
             if (this.networks.length && gsm.props.network) {
                 const info = this.networks.filter((item) => {
-                    return item.Code == gsm.props.network.code ? true : false
+                    return item.Code === gsm.props.network.code ? true : false
                 });
                 if (info.length) {
                     gsm.props.network.operator = info[0].Operator;
@@ -433,7 +443,7 @@ class AppTerm {
             }
             if (!gsm.countryCode && gsm.props.smsc) {
                 icc = this.splitNumber(gsm.props.smsc);
-                if (icc.length == 2) {
+                if (icc.length === 2) {
                     gsm.countryCode = icc[0];
                 }
             }
@@ -619,17 +629,21 @@ class AppTerm {
                 const idx = this.clients.indexOf(socket);
                 if (idx >= 0) {
                     this.clients.splice(idx, 1);
-                    if (this.uiCon) this.uiCon.emit('client');
+                    if (this.uiCon) {
+                        this.uiCon.emit('client');
+                    }
                 }
             });
             socket.on('auth', secret => {
-                const authenticated = this.config.secret == secret;
+                const authenticated = this.config.secret === secret;
                 if (authenticated) {
                     console.log('Client is authenticated: %s', socket.id);
                     clearTimeout(timeout);
                     this.clients.push(socket);
                     socket.join(this.ClientRoom);
-                    if (this.uiCon) this.uiCon.emit('client');
+                    if (this.uiCon) {
+                        this.uiCon.emit('client');
+                    }
                 } else {
                     console.log('Client is NOT authenticated: %s', socket.id);
                 }

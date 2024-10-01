@@ -31,17 +31,19 @@
 const path = require('path');
 const Cmd = require('@ntlab/ntlib/cmd');
 
-Cmd.addBool('help', 'h', 'Show program usage').setAccessible(false);
-Cmd.addVar('config', '', 'Read app configuration from file', 'config-file');
-Cmd.addVar('driver', '', 'Read driver from file', 'driver-file');
-Cmd.addVar('port', 'p', 'Set web server port to listen', 'port');
-Cmd.addVar('logdir', '', 'Set the log file location', 'directory');
-Cmd.addBool('auto', 'a', 'Automatically open all available ports');
-Cmd.addBool('read-new-message', '', 'Once the terminal opened, try to read new messages');
-Cmd.addBool('log-ussd', 'u', 'Add ussd command to activity');
+if (require.main === module) {
+    Cmd.addBool('help', 'h', 'Show program usage').setAccessible(false);
+    Cmd.addVar('config', '', 'Read app configuration from file', 'config-file');
+    Cmd.addVar('driver', '', 'Read driver from file', 'driver-file');
+    Cmd.addVar('port', 'p', 'Set web server port to listen', 'port');
+    Cmd.addVar('logdir', '', 'Set the log file location', 'directory');
+    Cmd.addBool('auto', 'a', 'Automatically open all available ports');
+    Cmd.addBool('read-new-message', '', 'Once the terminal opened, try to read new messages');
+    Cmd.addBool('log-ussd', 'u', 'Add ussd command to activity');
 
-if (!Cmd.parse() || (Cmd.get('help') && usage())) {
-    process.exit();
+    if (!Cmd.parse() || (Cmd.get('help') && usage())) {
+        process.exit();
+    }
 }
 
 const fs = require('fs');
@@ -52,7 +54,8 @@ const { Work } = require('@ntlab/work');
 const database = {
     dialect: 'mysql',
     host: 'localhost',
-    username: 'root',
+    port: 3306,
+    user: 'root',
     password: null,
     database: 'smsgw'
 }
@@ -83,27 +86,36 @@ class App {
         if (Cmd.get('logdir') && fs.existsSync(Cmd.get('logdir'))) {
             this.config.logdir = Cmd.get('logdir');
         }
-        let workdir = this.config.workdir ? this.config.workdir : __dirname;
+        const workdir = this.config.workdir ? this.config.workdir : __dirname;
         // check for default configuration
-        if (!this.config.database)
+        if (!this.config.database) {
             this.config.database = database;
-        if (!this.config.driverFilename)
+        }
+        if (!this.config.driverFilename) {
             this.config.driverFilename = AtDriverIni;
-        if (!this.config.networkFilename)
+        }
+        if (!this.config.networkFilename) {
             this.config.networkFilename = path.join(__dirname, 'Network.csv');
-        if (!this.config.iccFilename)
+        }
+        if (!this.config.iccFilename) {
             this.config.iccFilename = path.join(__dirname, 'ICC.ini');
-        if (!this.config.sessiondir)
+        }
+        if (!this.config.sessiondir) {
             this.config.sessiondir = path.join(workdir, 'sessions');
-        if (!this.config.logdir)
+        }
+        if (!this.config.logdir) {
             this.config.logdir = path.join(workdir, 'logs');
-        if (!this.config.msgRefFilename)
+        }
+        if (!this.config.msgRefFilename) {
             this.config.msgRefFilename = path.join(workdir, 'msgref.json');
+        }
         if (!this.config.secret) {
             this.config.secret = this.hashgen();
             console.log('Using secret: %s', this.config.secret);
         }
-        if (!this.config.security) this.config.security = {};
+        if (!this.config.security) {
+            this.config.security = {};
+        }
         if (!this.config.security.username) {
             this.config.security.username = 'admin';
             console.log('Web interface username using default: %s', this.config.security.username);
@@ -155,7 +167,7 @@ class App {
             try {
                 this.ui = require(this.config.ui)(this.config);
             } catch (err) {
-                console.error('Web interface not available: ' + this.config.ui);
+                console.error(`Web interface not available: ${this.config.ui} (${err})`);
             }
             resolve();
         });
@@ -180,7 +192,7 @@ class App {
                 this.ui.title = 'SMS Terminal';
                 this.ui.term = this.ui.locals.term = this.term;
                 this.ui.authenticate = (username, password) => {
-                    return username == this.config.security.username && password == this.config.security.password ?
+                    return username === this.config.security.username && password === this.config.security.password ?
                         true : false;
                 }
                 const packageInfo = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json')));
@@ -216,16 +228,20 @@ class App {
     }
 }
 
-(function run() {
-    new App().run();
-})();
+if (require.main === module) {
+    (function run() {
+        new App().run();
+    })();
 
-function usage() {
-    console.log('Usage:');
-    console.log('  node %s [options]', path.basename(process.argv[1]));
-    console.log('');
-    console.log('Options:');
-    console.log(Cmd.dump());
-    console.log('');
-    return true;
+    function usage() {
+        console.log('Usage:');
+        console.log('  node %s [options]', path.basename(process.argv[1]));
+        console.log('');
+        console.log('Options:');
+        console.log(Cmd.dump());
+        console.log('');
+        return true;
+    }
+} else {
+    module.exports = App;
 }

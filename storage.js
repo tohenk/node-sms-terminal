@@ -23,8 +23,10 @@
  */
 
 const path = require('path');
-const Sequelize = require('sequelize');
+const SequelizeManager = require('@ntlab/sequelize-manager');
+const Work = require('@ntlab/work/work');
 const Queue = require('@ntlab/work/queue');
+const { Op } = require('@sequelize/core');
 const { AtSms } = require('@ntlab/gsm-at/at-sms');
 
 /**
@@ -42,19 +44,16 @@ class AppStorage {
     ACTIVITY_USSD = 5
     ACTIVITY_CUSD = 6
 
-    Sequelize = Sequelize
+    Op = Op
 
     init(options) {
-        return new Promise((resolve, reject) => {
-            this.db = new Sequelize(options);
-            this.Activity = require('./model/Activity')(this.db);
-            this.Pdu = require('./model/Pdu')(this.db);
-            this.PduReport = require('./model/PduReport')(this.db);
-            this.db.authenticate()
-                .then(() => resolve())
-                .catch(err => reject(err))
-            ;
-        });
+        this.manager = new SequelizeManager({modeldir: path.join(__dirname, 'model'), modelStore: this});
+        return Work.works([
+            [w => this.manager.init(options)],
+            [w => this.manager.connectDatabase()],
+            [w => this.manager.syncModels()],
+            [w => Promise.resolve(this.db = this.manager.getSequelize())],
+        ]);
     }
 
     saveActivity(origin, activity, done) {
@@ -66,14 +65,22 @@ class AppStorage {
         }
         this.Activity.count({where: condition})
             .then(count => {
-                if (0 == count) {
-                    if (!activity.imsi) activity.imsi = origin;
-                    if (!activity.status) activity.status = 0;
-                    if (!activity.time) activity.time = new Date();
-                    if (typeof activity.data == 'string' && activity.data.length == 0) activity.data = null;
+                if (0 === count) {
+                    if (!activity.imsi) {
+                        activity.imsi = origin;
+                    }
+                    if (!activity.status) {
+                        activity.status = 0;
+                    }
+                    if (!activity.time) {
+                        activity.time = new Date();
+                    }
+                    if (typeof activity.data === 'string' && activity.data.length === 0) {
+                        activity.data = null;
+                    }
                     this.Activity.create(activity)
                         .then(result => {
-                            if (typeof done == 'function') {
+                            if (typeof done === 'function') {
                                 done(result);
                             }
                         })
@@ -81,7 +88,7 @@ class AppStorage {
                 } else {
                     this.Activity.findOne({where: condition})
                         .then(result => {
-                            if (typeof activity.status != 'undefined' && result.status != activity.status) {
+                            if (activity.status !== undefined && result.status !== activity.status) {
                                 result.update({status: activity.status});
                             }
                         })
@@ -93,14 +100,14 @@ class AppStorage {
 
     savePdu(origin, msg, done) {
         const dir = msg.isSubmit ? this.DIR_OUT : this.DIR_IN;
-        const mr = typeof msg.messageReference != 'undefined' ? msg.messageReference : null;
+        const mr = msg.messageReference !== undefined ? msg.messageReference : null;
         const conditions = {imsi: origin, pdu: msg.pdu, dir: dir};
-        if (dir == this.DIR_OUT) {
+        if (dir === this.DIR_OUT) {
             conditions.mr = mr;
         }
         this.Pdu.count({where: conditions})
             .then(count => {
-                if (count == 0) {
+                if (count === 0) {
                     this.Pdu.create({
                             hash: msg.hash,
                             imsi: origin,
@@ -111,7 +118,7 @@ class AppStorage {
                             time: new Date()
                         })
                         .then(pdu => {
-                            if (typeof done == 'function') {
+                            if (typeof done === 'function') {
                                 done(pdu);
                             }
                         })
@@ -124,7 +131,7 @@ class AppStorage {
     saveReport(origin, msg, done) {
         this.PduReport.count({where: {imsi: origin, pdu: msg.pdu}})
             .then(count => {
-                if (count == 0) {
+                if (count === 0) {
                     return this.PduReport.create({
                         imsi: origin,
                         pdu: msg.pdu,
@@ -158,10 +165,12 @@ class AppStorage {
             }
             let hash;
             const q = new Queue(results, Pdu => {
-                let matched = results.length == 1;
+                let matched = results.length === 1;
                 if (!matched) {
                     let seconds = Math.abs(Math.floor((msg.sentTime - Pdu.time) / 1000));
-                    if (seconds <= 1 * 24 * 60 * 60) matched = true;
+                    if (seconds <= 1 * 24 * 60 * 60) {
+                        matched = true;
+                    }
                 }
                 if (matched) {
                     if (!hash) hash = Pdu.hash;
@@ -179,10 +188,12 @@ class AppStorage {
                 }
             });
             q.once('done', () => {
-                if (typeof done == 'function') {
+                if (typeof done === 'function') {
                     status.imsi = origin;
                     status.address = msg.address;
-                    if (hash) status.hash = hash;
+                    if (hash) {
+                        status.hash = hash;
+                    }
                     done(status);
                 }
             });
@@ -194,8 +205,8 @@ class AppStorage {
             .then(results => {
                 const q = new Queue(results, report => {
                     this.updateReport(origin, report, false, status => {
-                        if (status.hash == hash) {
-                            if (typeof done == 'function') {
+                        if (status.hash === hash) {
+                            if (typeof done === 'function') {
                                 done(status);
                             }
                         } else {
@@ -204,7 +215,7 @@ class AppStorage {
                     });
                 });
                 q.once('done', () => {
-                    if (typeof done == 'function') {
+                    if (typeof done === 'function') {
                         done({});
                     }
                 });
@@ -216,7 +227,7 @@ class AppStorage {
         return this.Activity.findAll({
             where: {
                 status: 0,
-                type: {[Sequelize.Op.in]: [this.ACTIVITY_RING, this.ACTIVITY_INBOX, this.ACTIVITY_CUSD]}
+                type: {[Op.in]: [this.ACTIVITY_RING, this.ACTIVITY_INBOX, this.ACTIVITY_CUSD]}
             },
             order: [['time', 'ASC']]
         });
@@ -231,7 +242,7 @@ class AppStorage {
         }
         return this.PduReport.findAll({
             where: {
-                time: {[Sequelize.Op.gte]: since}
+                time: {[Op.gte]: since}
             }
         });
     }
