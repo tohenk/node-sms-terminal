@@ -48,12 +48,13 @@ Set [Sequelize](http://docs.sequelizejs.com/) database connection parameter.
 ```json
 {
     "database": {
-        "dialect":"mysql",
+        "dialect": "mysql",
         "host": "localhost",
-        "username":"username",
-        "password":"password",
-        "database":"smsgw",
-        "timezone":"Asia/Jakarta"
+        "port": 3306,
+        "user": "username",
+        "password": "password",
+        "database": "smsgw",
+        "timezone": "Asia/Jakarta"
     }
 }
 ```
