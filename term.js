@@ -120,12 +120,8 @@ class AppTerm {
             if (this.networkFilename && fs.existsSync(this.networkFilename)) {
                 const netCsv = csv
                     .parse({headers: true, delimiter: ';', objectMode: true})
-                    .on('data', (data) => {
-                        this.networks.push(data);
-                    })
-                    .on('end', () => {
-                        resolve();
-                    });
+                    .on('data', data => this.networks.push(data))
+                    .on('end', () => resolve());
                 fs.createReadStream(this.networkFilename).pipe(netCsv);
             } else {
                 resolve();
@@ -427,9 +423,7 @@ class AppTerm {
             }
             let icc;
             if (this.networks.length && gsm.props.network) {
-                const info = this.networks.filter((item) => {
-                    return item.Code === gsm.props.network.code ? true : false
-                });
+                const info = this.networks.filter(item => item.Code == gsm.props.network.code);
                 if (info.length) {
                     gsm.props.network.operator = info[0].Operator;
                     gsm.props.network.country = info[0].Country;
