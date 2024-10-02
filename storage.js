@@ -108,15 +108,16 @@ class AppStorage {
         this.Pdu.count({where: conditions})
             .then(count => {
                 if (count === 0) {
-                    this.Pdu.create({
-                            hash: msg.hash,
-                            imsi: origin,
-                            dir: dir,
-                            address: msg.address,
-                            pdu: msg.pdu,
-                            mr: mr,
-                            time: new Date()
-                        })
+                    const data = {
+                        hash: msg.hash,
+                        imsi: origin,
+                        dir: dir,
+                        address: msg.address,
+                        pdu: msg.pdu,
+                        mr: mr,
+                        time: new Date()
+                    }
+                    this.Pdu.create(data)
                         .then(pdu => {
                             if (typeof done === 'function') {
                                 done(pdu);
@@ -132,11 +133,12 @@ class AppStorage {
         this.PduReport.count({where: {imsi: origin, pdu: msg.pdu}})
             .then(count => {
                 if (count === 0) {
-                    return this.PduReport.create({
+                    const data = {
                         imsi: origin,
                         pdu: msg.pdu,
                         time: new Date()
-                    });
+                    }
+                    return this.PduReport.create(data);
                 }
                 return true;
             })
@@ -173,12 +175,12 @@ class AppStorage {
                     }
                 }
                 if (matched) {
-                    if (!hash) hash = Pdu.hash;
+                    if (!hash) {
+                        hash = Pdu.hash;
+                    }
                     if (update) {
                         Pdu.update(status)
-                            .then(() => {
-                                q.next();
-                            })
+                            .then(() => q.next())
                         ;
                     } else {
                         q.next();

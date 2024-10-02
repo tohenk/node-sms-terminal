@@ -54,7 +54,7 @@ class AppTerm {
             deliveryReport: 'requestMessageStatus',
             requestReply: 'requestMessageReply',
             emptyWhenFull: 'emptyWhenFull'
-        };
+        }
         return Work.works([
             [w => this.initializeLogger()],
             [w => this.loadNetworks()],
@@ -602,14 +602,14 @@ class AppTerm {
 
     setSocketIo(io) {
         this.io = io;
-        this.uiCon = this.io.of('/ui');
+        this.uiCon = this.io.of(this.config.getPath('/ui'));
         this.uiCon.on('connection', socket => {
             console.log('UI client connected: %s', socket.id);
             socket.on('disconnect', () => {
                 console.log('UI client disconnected: %s', socket.id);
             });
         });
-        this.termCon = this.io.of('/ctrl');
+        this.termCon = this.io.of(this.config.getPath('/ctrl'));
         this.termCon.on('connection', socket => {
             console.log('Term client connected: %s', socket.id);
             socket.time = new Date();

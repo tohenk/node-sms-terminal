@@ -63,7 +63,6 @@ const database = {
 class App {
 
     config = {}
-    term = null
 
     initialize() {
         let filename;
@@ -135,6 +134,18 @@ class App {
         }
         this.config.logUssd = Cmd.get('log-ussd') ? true : false;
         this.config.readNewMessage = Cmd.get('read-new-message') ? true : false;
+        this.config.getPath = function(path) {
+            let rootPath = this.rootPath;
+            if (rootPath) {
+                if (rootPath.substr(-1) === '/') {
+                    rootPath = rootPath.substr(0, rootPath.length - 1);
+                }
+                if (rootPath) {
+                    path = rootPath + path;
+                }
+            }
+            return path;
+        }
         return true;
     }
 
@@ -183,6 +194,9 @@ class App {
                 opts.cors = this.config.cors;
             } else {
                 opts.cors = {origin: '*'};
+            }
+            if (this.config.rootPath) {
+                opts.path = this.config.getPath('/socket.io/');
             }
             const { Server } = require('socket.io');
             const io = new Server(server, opts);
