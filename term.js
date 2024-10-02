@@ -68,7 +68,7 @@ class AppTerm {
     initializeLogger() {
         return new Promise((resolve, reject) => {
             this.logdir = this.config.logdir || path.join(__dirname, 'logs');
-            this.logfile = path.join(this.logdir, 'activity.log');
+            this.logfile = path.join(this.logdir, 'terminal.log');
             this.logger = new Logger(this.logfile);
             resolve();
         });
