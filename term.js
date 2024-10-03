@@ -310,7 +310,7 @@ class AppTerm {
                 }
             });
             if (gsm.info.imsi && this.io) {
-                gsm.io = this.io.of('/' + gsm.info.imsi);
+                gsm.io = this.io.of(this.config.getPath('/' + gsm.info.imsi));
                 gsm.io.on('connection', socket => {
                     console.log('IMSI connected: %s', socket.id);
                     socket.on('disconnect', () => {
