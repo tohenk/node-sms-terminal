@@ -48,7 +48,7 @@ if (require.main === module) {
 
 const fs = require('fs');
 const Logger = require('@ntlab/ntlib/logger');
-const { AtDriverIni } = require('@ntlab/gsm-at');
+const { AtDriverIni, AtStkIni } = require('@ntlab/gsm-at');
 const { Work } = require('@ntlab/work');
 
 const database = {
@@ -92,6 +92,9 @@ class App {
         }
         if (!this.config.driverFilename) {
             this.config.driverFilename = AtDriverIni;
+        }
+        if (!this.config.stkDriverFilename) {
+            this.config.stkDriverFilename = AtStkIni;
         }
         if (!this.config.networkFilename) {
             this.config.networkFilename = path.join(__dirname, 'Network.csv');
@@ -162,13 +165,19 @@ class App {
     }
 
     listTerm() {
+        const f = (items, max = 10) => {
+            const res = [];
+            const ar = [...items];
+            while (ar.length) {
+                const x = ar.splice(0, max);
+                res.push(`  ${x.join(', ')}`);
+            }
+            return res.join(',\n');
+        }
         return new Promise((resolve, reject) => {
-            const ports = Object.keys(this.term.ports);
-            console.log('Available ports: %s', ports.join(', '));
-            console.log('Available drivers:');
-            this.term.Pool.Driver.names().forEach(drv => {
-                console.log('- %s', this.term.Pool.Driver.get(drv).desc);
-            });
+            console.log('Available ports:\n%s', f(Object.keys(this.term.ports)));
+            console.log('Available drivers:\n%s', f(this.term.Pool.Driver.names(), 5));
+            console.log('Available STK drivers:\n%s', f(this.term.Pool.Stk.names(), 5));
             resolve();
         });
     }

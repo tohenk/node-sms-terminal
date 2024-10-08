@@ -77,6 +77,7 @@ class AppTerm {
     initializePool() {
         return new Promise((resolve, reject) => {
             this.Pool.Driver.load(this.config.driverFilename);
+            this.Pool.Stk.load(this.config.stkDriverFilename);
             this.Pool.init(portName => {
                 return new Promise((resolve, reject) => {
                     const portId = this.ports[portName];
@@ -309,12 +310,17 @@ class AppTerm {
                     this.uiCon.emit('log', {term: gsm.name, time: Date.now(), message: message});
                 }
             });
+            gsm.on('stk', data => {
+                if (this.uiCon) {
+                    this.uiCon.emit('stk', {term: gsm.name, data});
+                }
+            });
             if (gsm.info.imsi && this.io) {
                 gsm.io = this.io.of(this.config.getPath('/' + gsm.info.imsi));
                 gsm.io.on('connection', socket => {
-                    console.log('IMSI connected: %s', socket.id);
+                    console.log('IMSI %s connected: %s', gsm.info.imsi, socket.id);
                     socket.on('disconnect', () => {
-                        console.log('IMSI disconnected: %s', socket.id);
+                        console.log('IMSI %s disconnected: %s', gsm.info.imsi, socket.id);
                     });
                     socket.on('info', () => {
                         socket.emit('info', {
@@ -544,15 +550,23 @@ class AppTerm {
     detectAll() {
         const works = [];
         Object.keys(this.ports).forEach(portName => {
-            works.push(w => new Promise((resolve, reject) => {
-                this.open(portName)
-                    .then(() => resolve())
-                    .catch(err => {
-                        console.error(err);
-                        resolve();
-                    })
-                ;
-            }));
+            let detect = true;
+            if (typeof this.config.portMatcher === 'string') {
+                if (!portName.match(this.config.portMatcher)) {
+                    detect = false;
+                }
+            }
+            if (detect) {
+                works.push(w => new Promise((resolve, reject) => {
+                    this.open(portName)
+                        .then(() => resolve())
+                        .catch(err => {
+                            console.error(err);
+                            resolve();
+                        })
+                    ;
+                }));
+            }
         });
         return Work.works(works);
     }
@@ -644,20 +658,24 @@ class AppTerm {
                 socket.emit('auth', authenticated);
             });
             socket.on('init', () => {
-                if (this.clients.indexOf(socket) < 0) return;
-                this.detectAndNotify(socket);
+                if (this.clients.indexOf(socket) >= 0) {
+                    this.detectAndNotify(socket);
+                }
             });
             socket.on('check-pending', () => {
-                if (this.clients.indexOf(socket) < 0) return;
-                this.checkPendingActivity();
+                if (this.clients.indexOf(socket) >= 0) {
+                    this.checkPendingActivity();
+                }
             });
             socket.on('check-report', since => {
-                if (this.clients.indexOf(socket) < 0) return;
-                this.checkReport(since);
+                if (this.clients.indexOf(socket) >= 0) {
+                    this.checkReport(since);
+                }
             });
             socket.on('check-message', type => {
-                if (this.clients.indexOf(socket) < 0) return;
-                this.checkMessage(type);
+                if (this.clients.indexOf(socket) >= 0) {
+                    this.checkMessage(type);
+                };
             });
         });
         return this;
