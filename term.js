@@ -495,7 +495,8 @@ class AppTerm {
         Object.keys(this.ports).forEach(portName => {
             const gsm = this.Pool.get(portName);
             if (gsm && gsm.info.imsi) {
-                gsm.listMessage(AtConst.SMS_STAT_RECV_UNREAD);
+                gsm.listMessage(AtConst.SMS_STAT_RECV_UNREAD)
+                    .catch(err => console.error(err));
             }
         });
         this.Storage.getPendingActivities()
