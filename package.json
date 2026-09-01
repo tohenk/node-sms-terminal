@@ -1,6 +1,6 @@
 {
   "name": "@ntlab/sms-terminal",
-  "version": "3.2.3",
+  "version": "3.2.4",
   "description": "SMS Terminal",
   "main": "app.js",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/tohenk/node-sms-terminal.git"
+    "url": "git+https://github.com/tohenk/node-sms-terminal.git"
   },
   "keywords": [
     "sms",
@@ -23,18 +23,21 @@
   "homepage": "https://github.com/tohenk/node-sms-terminal#readme",
   "dependencies": {
     "@ntlab/gsm-at": "^3.12.0",
-    "@ntlab/ntlib": "^2.9.1",
+    "@ntlab/ntlib": "^2.10.0",
     "@ntlab/sequelize-manager": "^1.4.1",
-    "@ntlab/work": "^2.7.0",
+    "@ntlab/work": "^2.9.0",
     "@sequelize/core": "^7.0.0-alpha.48",
     "@sequelize/mysql": "^7.0.0-alpha.48",
     "fast-csv": "^5.0.7",
-    "ini": "^5.0.0",
-    "mysql2": "^3.22.4",
+    "ini": "^7.0.0",
+    "mysql2": "^3.24.2",
     "serialport": "^13.0.0",
     "socket.io": "^4.8.3"
   },
   "bin": {
     "node-sms-terminal": "app.js"
+  },
+  "allowScripts": {
+    "@serialport/bindings-cpp@13.0.0": true
   }
 }
